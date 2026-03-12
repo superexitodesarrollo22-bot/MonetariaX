@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, SafeAreaView, TextInput,
+  Alert, SafeAreaView, Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Theme from '../../theme';
@@ -12,20 +12,25 @@ import BottomSheet from '../../components/common/BottomSheet';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import EmptyState from '../../components/common/EmptyState';
-import { Categoria, TipoMovimiento } from '../../types';
+import { Categoria, CategoriaIngreso, TipoMovimiento } from '../../types';
 
 const MovimientosScreen: React.FC = () => {
   const { movimientos, agregarMovimiento, borrarMovimiento, cargando, resumenMes } = useFinanzasStore();
   const [modalVisible, setModalVisible] = useState(false);
   const [tipo, setTipo] = useState<TipoMovimiento>('gasto');
   const [monto, setMonto] = useState('');
-  const [categoria, setCategoria] = useState<Categoria | null>(null);
+  const [categoria, setCategoria] = useState<Categoria | CategoriaIngreso | null>(null);
   const [nota, setNota] = useState('');
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
 
   const resetForm = () => {
     setMonto(''); setCategoria(null); setNota(''); setError('');
+  };
+
+  const setTipoYLocal = (t: TipoMovimiento) => {
+    setTipo(t);
+    setCategoria(null);
   };
 
   const handleGuardar = async () => {
@@ -70,12 +75,6 @@ const MovimientosScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Movimientos</Text>
-        <TouchableOpacity
-          onPress={() => { resetForm(); setModalVisible(true); }}
-          style={styles.addBtn}
-        >
-          <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
       </View>
 
       {/* Resumen rápido */}
@@ -117,6 +116,15 @@ const MovimientosScreen: React.FC = () => {
         <View style={{ height: 20 }} />
       </ScrollView>
 
+      {/* FAB */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => { resetForm(); setModalVisible(true); }}
+        activeOpacity={0.8}
+      >
+        <MaterialCommunityIcons name="plus" size={28} color="#FFFFFF" />
+      </TouchableOpacity>
+
       {/* Bottom Sheet: Nuevo Movimiento */}
       <BottomSheet
         visible={modalVisible}
@@ -128,7 +136,7 @@ const MovimientosScreen: React.FC = () => {
           <View style={styles.tipoRow}>
             <TouchableOpacity
               style={[styles.tipoBtn, tipo === 'ingreso' && styles.tipoBtnActiveIngreso]}
-              onPress={() => setTipo('ingreso')}
+              onPress={() => setTipoYLocal('ingreso')}
             >
               <MaterialCommunityIcons
                 name="arrow-down-circle-outline"
@@ -144,7 +152,7 @@ const MovimientosScreen: React.FC = () => {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tipoBtn, tipo === 'gasto' && styles.tipoBtnActiveGasto]}
-              onPress={() => setTipo('gasto')}
+              onPress={() => setTipoYLocal('gasto')}
             >
               <MaterialCommunityIcons
                 name="arrow-up-circle-outline"
@@ -167,12 +175,12 @@ const MovimientosScreen: React.FC = () => {
             value={monto}
             onChangeText={v => { setMonto(v.replace(',', '.')); setError(''); }}
             keyboardType="decimal-pad"
-            leftIcon="cash-outline"
+            leftIcon="currency-usd"
           />
 
           {/* Categorías */}
           <Text style={styles.catLabel}>Categoría</Text>
-          <CategorySelector selected={categoria} onSelect={c => { setCategoria(c); setError(''); }} />
+          <CategorySelector selected={categoria} onSelect={c => { setCategoria(c); setError(''); }} tipo={tipo} />
 
           {/* Nota */}
           <Input
@@ -205,9 +213,6 @@ const MovimientosScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Theme.colors.background },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     padding: Theme.spacing.md,
     paddingTop: Theme.spacing.lg,
   },
@@ -216,13 +221,22 @@ const styles = StyleSheet.create({
     fontWeight: Theme.typography.fontWeight.extrabold,
     color: Theme.colors.text,
   },
-  addBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+  fab: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 100 : 80,
+    right: 24,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: Theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 100,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
   },
   quickSummary: {
     flexDirection: 'row',
@@ -244,7 +258,10 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   list: { flex: 1 },
-  listContent: { padding: Theme.spacing.md },
+  listContent: { 
+    padding: Theme.spacing.md,
+    paddingBottom: 100,
+  },
   hint: {
     fontSize: Theme.typography.fontSize.xs,
     color: Theme.colors.textLight,

@@ -51,9 +51,18 @@ export const calcularTotalCuotas = (
   interesMensual: number,
   cuotaMensual: number
 ): number => {
-  if (interesMensual === 0) return Math.ceil(montoTotal / cuotaMensual);
+  if (interesMensual === 0) {
+    if (cuotaMensual <= 0) return 1;
+    return Math.ceil(montoTotal / cuotaMensual);
+  }
   const tasa = interesMensual / 100;
+  const interesMinimo = montoTotal * tasa;
+  // Si la cuota no cubre ni el interés, la deuda nunca se pagaría
+  if (cuotaMensual <= interesMinimo) {
+    return 9999; // valor seguro para evitar crash
+  }
   const n = Math.log(cuotaMensual / (cuotaMensual - montoTotal * tasa)) / Math.log(1 + tasa);
+  if (!isFinite(n) || isNaN(n) || n <= 0) return 9999;
   return Math.ceil(n);
 };
 
@@ -71,8 +80,11 @@ export const calcularFechaFinalizacion = (
   totalCuotas: number,
   pagosRealizados: number
 ): string => {
-  const cuotasRestantes = totalCuotas - pagosRealizados;
+  const cuotasRestantes = Math.max(totalCuotas - pagosRealizados, 0);
   const fecha = new Date(fechaInicio);
-  fecha.setMonth(fecha.getMonth() + cuotasRestantes);
+  if (isNaN(fecha.getTime())) return new Date().toISOString();
+  const mesesASumar = Math.min(cuotasRestantes, 1200); // máximo 100 años
+  fecha.setMonth(fecha.getMonth() + mesesASumar);
+  if (isNaN(fecha.getTime())) return new Date().toISOString();
   return fecha.toISOString();
 };

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, SafeAreaView,
-  TouchableOpacity, Alert,
+  TouchableOpacity, Alert, Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Theme from '../../theme';
@@ -44,8 +44,12 @@ const DeudasScreen: React.FC = () => {
     if (!montoTotal || isNaN(Number(montoTotal)) || Number(montoTotal) <= 0) {
       setError('Ingresa el monto total de la deuda'); return;
     }
-    if (!cuota || isNaN(Number(cuota)) || Number(cuota) <= 0) {
-      setError('Ingresa la cuota mensual'); return;
+    const interesNum = Number(interes) || 0;
+    const cuotaNum = Number(cuota);
+    const montoNum = Number(montoTotal);
+    if (interesNum > 0 && cuotaNum <= montoNum * (interesNum / 100)) {
+      setError(`La cuota mensual debe ser mayor a $${(montoNum * interesNum / 100).toFixed(2)} para cubrir el interés`);
+      return;
     }
     setGuardando(true);
     await agregarDeuda(
@@ -86,12 +90,6 @@ const DeudasScreen: React.FC = () => {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Text style={styles.title}>Mis Deudas</Text>
-        <TouchableOpacity
-          onPress={() => { resetForm(); setModalVisible(true); }}
-          style={styles.addBtn}
-        >
-          <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
       </View>
 
       {deudas.length > 0 && (
@@ -123,6 +121,15 @@ const DeudasScreen: React.FC = () => {
         <View style={{ height: 20 }} />
       </ScrollView>
 
+      {/* FAB */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => { resetForm(); setModalVisible(true); }}
+        activeOpacity={0.8}
+      >
+        <MaterialCommunityIcons name="plus" size={28} color="#FFFFFF" />
+      </TouchableOpacity>
+
       <BottomSheet
         visible={modalVisible}
         onClose={() => { setModalVisible(false); resetForm(); }}
@@ -142,7 +149,7 @@ const DeudasScreen: React.FC = () => {
             value={montoTotal}
             onChangeText={v => { setMontoTotal(v.replace(',', '.')); setError(''); }}
             keyboardType="decimal-pad"
-            leftIcon="cash-outline"
+            leftIcon="currency-usd"
           />
           <Input
             label="Interés mensual (% — opcional, pon 0 si no hay)"
@@ -183,9 +190,6 @@ const DeudasScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Theme.colors.background },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     padding: Theme.spacing.md,
     paddingTop: Theme.spacing.lg,
   },
@@ -194,13 +198,22 @@ const styles = StyleSheet.create({
     fontWeight: Theme.typography.fontWeight.extrabold,
     color: Theme.colors.text,
   },
-  addBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+  fab: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 100 : 80,
+    right: 24,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: Theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 100,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
   },
   totalWrap: {
     flexDirection: 'row',
@@ -222,7 +235,10 @@ const styles = StyleSheet.create({
     color: Theme.colors.accent,
   },
   list: { flex: 1 },
-  listContent: { padding: Theme.spacing.md },
+  listContent: { 
+    padding: Theme.spacing.md,
+    paddingBottom: 100,
+  },
   errorText: {
     fontSize: Theme.typography.fontSize.sm,
     color: Theme.colors.danger,

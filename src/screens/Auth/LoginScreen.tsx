@@ -26,14 +26,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    console.log('biometriaDisponible:', biometriaDisponible, 'biometriaActiva:', biometriaActiva);
+    
     Animated.timing(opacityAnim, {
       toValue: 1, duration: 600, useNativeDriver: true,
     }).start();
 
+    // Solo intentar automático si ambas están activas
     if (biometriaDisponible && biometriaActiva) {
       setTimeout(() => handleAuth(), 500);
     }
-  }, []);
+  }, [biometriaDisponible, biometriaActiva]);
 
   const pulseBtnAnim = () => {
     Animated.sequence([
@@ -44,11 +47,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
 
   const handleAuth = async () => {
     pulseBtnAnim();
-    if (!biometriaDisponible || !biometriaActiva) {
+    
+    // Si no hay biometría disponible en el dispositivo, entrar directo
+    if (!biometriaDisponible) {
+      console.log('Biometría no disponible, saltando...');
       setAutenticado(true);
       onSuccess();
       return;
     }
+
+    // Si está disponible pero no activa, entrar directo al presionar
+    if (!biometriaActiva) {
+      setAutenticado(true);
+      onSuccess();
+      return;
+    }
+
     const success = await autenticar();
     if (success) onSuccess();
   };

@@ -1,10 +1,10 @@
 import { getDatabase } from './database';
-import { Movimiento, TipoMovimiento, Categoria } from '../types';
+import { Movimiento, TipoMovimiento, Categoria, CategoriaIngreso } from '../types';
 
 export const insertarMovimiento = async (
   tipo: TipoMovimiento,
   monto: number,
-  categoria: Categoria,
+  categoria: Categoria | CategoriaIngreso,
   nota: string,
   fecha: string
 ): Promise<number> => {

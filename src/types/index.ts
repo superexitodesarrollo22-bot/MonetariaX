@@ -1,5 +1,14 @@
 export type TipoMovimiento = 'ingreso' | 'gasto';
 
+export type CategoriaIngreso =
+  | 'sueldo'
+  | 'ventas'
+  | 'cobro'
+  | 'freelance'
+  | 'negocio'
+  | 'regalo'
+  | 'otro';
+
 export type Categoria =
   | 'comida'
   | 'transporte'
@@ -15,7 +24,7 @@ export interface Movimiento {
   id: number;
   tipo: TipoMovimiento;
   monto: number;
-  categoria: Categoria;
+  categoria: Categoria | CategoriaIngreso | string;
   nota?: string;
   fecha: string; // ISO string
   createdAt: string;

@@ -74,7 +74,7 @@ const AppNavigator: React.FC = () => {
       <BiometriaSetupScreen
         onFinish={() => {
           const cfg = useConfigStore.getState().config;
-          setAppState('app');  // <-- salta el login para testing (Expo Go)
+          setAppState(cfg.biometriaActiva ? 'login' : 'app');
         }}
       />
     );
