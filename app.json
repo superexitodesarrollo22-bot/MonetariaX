@@ -1,30 +1,53 @@
 {
   "expo": {
     "name": "MonetariaX",
-    "slug": "MonetariaX",
+    "slug": "monetariax",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0A2463"
     },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.monetariax.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "MonetariaX usa Face ID para proteger tu información financiera.",
+        "NSLocalAuthenticationUsageDescription": "MonetariaX usa biometría para proteger tu información financiera."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A2463"
       },
-      "predictiveBackGestureEnabled": false
+      "package": "com.monetariax.app",
+      "versionCode": 1,
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "MonetariaX necesita Face ID para proteger tus datos financieros."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "monetariax-001"
+      }
     }
   }
 }
