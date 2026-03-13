@@ -17,7 +17,9 @@ export const categoryIconMap: Record<Categoria | CategoriaIngreso, IconConfig> =
   salud:          { name: 'heart-pulse',            color: '#E63946', bgColor: '#FFE5E7' },
   educacion:      { name: 'book-open-outline',      color: '#0A2463', bgColor: '#E8EDFF' },
   ahorro:         { name: 'piggy-bank-outline',     color: '#00C896', bgColor: '#E0FFF7' },
+  deuda:          { name: 'credit-card-outline',    color: '#E63946', bgColor: '#FFE5E7', label: '💳 Pago de cuota' },
   // Ingresos
+
   sueldo:         { name: 'briefcase-outline',     color: '#00C896', bgColor: '#E0FFF7', label: 'Sueldo' },
   ventas:         { name: 'storefront-outline',    color: '#0A2463', bgColor: '#E8EDFF', label: 'Ventas' },
   cobro:          { name: 'hand-coin-outline',     color: '#F4A261', bgColor: '#FFF3E0', label: 'Cobro' },

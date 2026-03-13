@@ -1,8 +1,10 @@
 import React, { useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
-  TouchableOpacity, SafeAreaView,
+  TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Theme from '../../theme';
 import { useFinanzasStore } from '../../store/finanzasStore';

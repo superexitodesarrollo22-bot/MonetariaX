@@ -9,6 +9,7 @@ import {
   obtenerMovimientosPorMes,
   eliminarMovimiento,
   obtenerAnalisisHormiga,
+  eliminarMovimientosPorDeuda,
 } from '../database/movimientosDB';
 import {
   insertarDeuda,
@@ -72,12 +73,16 @@ interface FinanzasState {
     interesMensual: number,
     cuotaMensual: number,
     fechaInicio: string,
-    cuotaActual?: number,
+    fechaFinalizacion: string,
+    totalCuotas: number,
+    cuotaActual: number,
     diaPagoMensual?: number
   ) => Promise<void>;
 
-  pagarCuotaDeuda: (id: number) => Promise<void>;
-  borrarDeuda: (id: number) => Promise<void>;
+  pagarCuotaDeuda: (id: number, numCuotas?: number) => Promise<any>;
+
+  borrarDeuda: (id: number, nombre?: string, borrarMovimientos?: boolean) => Promise<void>;
+
 }
 
 export const useFinanzasStore = create<FinanzasState>((set, get) => {
@@ -142,19 +147,53 @@ export const useFinanzasStore = create<FinanzasState>((set, get) => {
       await get().cargarTodo();
     },
 
-    agregarDeuda: async (nombre: string, montoTotal: number, interesMensual: number, cuotaMensual: number, fechaInicio: string, cuotaActual?: number, diaPago?: number) => {
-      await insertarDeuda(nombre, montoTotal, interesMensual, cuotaMensual, fechaInicio, cuotaActual, diaPago);
-      await get().cargarDeudas();
+    agregarDeuda: async (nombre, montoTotal, interesMensual, cuotaMensual, fechaInicio, fechaFinalizacion, totalCuotas, cuotaActual, diaPago) => {
+      console.log('[STORE] agregarDeuda iniciando persistencia...');
+      try {
+        await insertarDeuda(nombre, montoTotal, interesMensual, cuotaMensual, fechaInicio, fechaFinalizacion, totalCuotas, cuotaActual, diaPago);
+        console.log('[STORE] agregarDeuda base de datos OK');
+        await get().cargarDeudas();
+        console.log('[STORE] agregarDeuda lista actualizada');
+      } catch (err: any) {
+        console.log('[STORE] Error en agregarDeuda:', err.message, err);
+        throw err;
+      }
     },
 
-    pagarCuotaDeuda: async (id: number) => {
-      await registrarPagoDeuda(id);
-      await get().cargarDeudas();
+
+
+    pagarCuotaDeuda: async (id: number, numCuotas: number = 1): Promise<{ terminada: boolean; nombre: string } | null> => {
+      const result = await registrarPagoDeuda(id, numCuotas);
+      if (!result) return null;
+      
+      const { deuda, terminada } = result;
+      
+      // Registro automático como movimiento de gasto para CADA cuota
+      // La cuotas pagadas en esta operación van desde (deuda.cuotaActual - numCuotas + 1) hasta deuda.cuotaActual
+      for (let i = 0; i < numCuotas; i++) {
+        const numCuota = deuda.cuotaActual - numCuotas + 1 + i;
+        await insertarMovimiento(
+          'gasto',
+          deuda.cuotaMensual,
+          'deuda',
+          `Cuota ${numCuota} - ${deuda.nombre}`,
+          new Date().toISOString().split('T')[0]
+        );
+      }
+      
+      await get().cargarTodo();
+      return { terminada, nombre: deuda.nombre };
     },
 
-    borrarDeuda: async (id: number) => {
+
+
+    borrarDeuda: async (id: number, nombre?: string, borrarMovimientos: boolean = false) => {
       await eliminarDeuda(id);
-      await get().cargarDeudas();
+      if (borrarMovimientos && nombre) {
+        await eliminarMovimientosPorDeuda(nombre);
+      }
+      await get().cargarTodo();
     },
+
   };
 });

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity, Alert, TextInput,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Theme from '../../theme';
@@ -18,6 +18,10 @@ const BiometriaSetupScreen: React.FC<BiometriaSetupProps> = ({ onFinish }) => {
   const { actualizarNombre, actualizarPin, config } = useConfigStore();
   const [nombre, setNombre] = React.useState('');
   const [pin, setPin] = React.useState('');
+
+  const nombreRef = useRef<TextInput>(null);
+  const pinRef = useRef<TextInput>(null);
+
 
   const handleActivar = async () => {
     if (!nombre.trim()) { Alert.alert('Error', 'Por favor ingresa tu nombre'); return; }
@@ -55,16 +59,28 @@ const BiometriaSetupScreen: React.FC<BiometriaSetupProps> = ({ onFinish }) => {
 
       <View style={styles.form}>
         <Input
+          ref={nombreRef}
           label="¿Cómo te llamas?"
           placeholder="Tu nombre"
           value={nombre}
           onChangeText={setNombre}
           leftIcon="account-outline"
           autoCapitalize="words"
+          returnKeyType={biometriaDisponible && pin.length === 0 ? "done" : "next"}
+          blurOnSubmit={biometriaDisponible && pin.length === 0}
+          onSubmitEditing={() => {
+            if (biometriaDisponible && pin.length === 0) {
+              handleActivar();
+            } else {
+              pinRef.current?.focus();
+            }
+          }}
         />
+
 
         {!biometriaDisponible || pin.length > 0 ? (
           <Input
+            ref={pinRef}
             label="PIN de seguridad (4 dígitos)"
             placeholder="0000"
             value={pin}
@@ -72,7 +88,10 @@ const BiometriaSetupScreen: React.FC<BiometriaSetupProps> = ({ onFinish }) => {
             keyboardType="number-pad"
             secureTextEntry
             leftIcon="lock-outline"
+            returnKeyType="done"
+            onSubmitEditing={handleGuardarConPin}
           />
+
         ) : null}
 
         {biometriaDisponible && pin.length === 0 && (

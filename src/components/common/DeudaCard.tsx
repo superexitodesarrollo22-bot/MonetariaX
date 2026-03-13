@@ -6,35 +6,28 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Theme from '../../theme';
 import { Deuda } from '../../types';
 import { formatMoney, formatDate } from '../../utils/formatters';
-import {
-  calcularTotalCuotas,
-  calcularTotalIntereses,
-  calcularFechaFinalizacion,
-} from '../../database/deudasDB';
+
 
 interface DeudaCardProps {
   deuda: Deuda;
   onPagar: () => void;
   onEliminar: () => void;
+  adelantadasHoy?: number; // Cuotas pagadas en el mes actual
 }
 
-const DeudaCard: React.FC<DeudaCardProps> = ({ deuda, onPagar, onEliminar }) => {
-  const totalCuotas = calcularTotalCuotas(
-    deuda.montoTotal, deuda.interesMensual, deuda.cuotaMensual
-  );
-  const totalIntereses = calcularTotalIntereses(
-    deuda.montoTotal, deuda.interesMensual, deuda.cuotaMensual
-  );
-  const totalAPagar = deuda.montoTotal + totalIntereses;
+
+const DeudaCard: React.FC<DeudaCardProps> = ({ deuda, onPagar, onEliminar, adelantadasHoy = 0 }) => {
+  const totalCuotas = deuda.totalCuotas || 1;
+  const cuotaEnLaQueVa = deuda.cuotaActual;
+  const totalAPagar = totalCuotas * deuda.cuotaMensual;
+  const totalIntereses = totalAPagar - deuda.montoTotal;
   
-  // Usar cuotaActual como base si existe, sumando los pagos realizados después de registrarla
-  // O simplemente sumar cuotaActual + pagosRealizados si consideramos que cuotaActual es la inicial.
-  const cuotaEnLaQueVa = (deuda.cuotaActual || 0) + deuda.pagosRealizados;
-  
-  const progreso = totalCuotas > 0 ? cuotaEnLaQueVa / totalCuotas : 0;
+  const progreso = cuotaEnLaQueVa / totalCuotas;
   const cuotasRestantes = Math.max(totalCuotas - cuotaEnLaQueVa, 0);
-  const montoRestante = Math.max(deuda.cuotaMensual * cuotasRestantes, 0);
-  const fechaFin = calcularFechaFinalizacion(deuda.fechaInicio, totalCuotas, cuotaEnLaQueVa);
+  const montoPagado = cuotaEnLaQueVa * deuda.cuotaMensual;
+  const montoRestante = cuotasRestantes * deuda.cuotaMensual;
+  const fechaFin = deuda.fechaFinalizacion;
+
 
   return (
     <View style={styles.card}>
@@ -55,22 +48,25 @@ const DeudaCard: React.FC<DeudaCardProps> = ({ deuda, onPagar, onEliminar }) => 
       <View style={styles.progressBg}>
         <View style={[styles.progressFill, { width: `${Math.min(progreso * 100, 100)}%` }]} />
       </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Theme.spacing.md }}>
-        <Text style={styles.progressText}>
-          {cuotaEnLaQueVa} de {totalCuotas} cuotas ({Math.round(progreso * 100)}%)
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Theme.spacing.md, alignItems: 'center' }}>
+        <Text style={[styles.progressText, { marginBottom: 0 }]}>
+          {cuotaEnLaQueVa} de {totalCuotas} cuotas pagadas ({Math.round(progreso * 100)}%)
         </Text>
-        {deuda.diaPagoMensual && (
-          <Text style={[styles.progressText, { color: Theme.colors.accent, fontWeight: 'bold' }]}>
-            Día de pago: {deuda.diaPagoMensual}
-          </Text>
+        {adelantadasHoy > 0 && (
+          <View style={styles.adelantoTag}>
+            <MaterialCommunityIcons name="check-decagram" size={14} color={Theme.colors.success} />
+            <Text style={styles.adelantoText}>Adelantaste {adelantadasHoy}</Text>
+          </View>
         )}
       </View>
+
+
 
       {/* Detalles */}
       <View style={styles.details}>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Monto original</Text>
-          <Text style={styles.detailValue}>{formatMoney(deuda.montoTotal)}</Text>
+          <Text style={styles.detailLabel}>Pagado hasta ahora</Text>
+          <Text style={[styles.detailValue, { color: Theme.colors.secondary }]}>{formatMoney(montoPagado)}</Text>
         </View>
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>Total intereses</Text>
@@ -79,16 +75,18 @@ const DeudaCard: React.FC<DeudaCardProps> = ({ deuda, onPagar, onEliminar }) => 
           </Text>
         </View>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Falta pagar</Text>
+          <Text style={styles.detailLabel}>Falta por pagar</Text>
           <Text style={[styles.detailValue, { color: Theme.colors.accent }]}>
             {formatMoney(montoRestante)}
           </Text>
         </View>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Termina aprox.</Text>
-          <Text style={styles.detailValue}>{formatDate(fechaFin)}</Text>
+          <Text style={styles.detailLabel}>Vence</Text>
+          <Text style={styles.detailValue}>{formatDate(fechaFin, { month: 'long', year: 'numeric' })}</Text>
         </View>
+
       </View>
+
 
       {cuotasRestantes > 0 && (
         <TouchableOpacity style={styles.pagarBtn} onPress={onPagar} activeOpacity={0.85}>
@@ -214,6 +212,22 @@ const styles = StyleSheet.create({
     fontWeight: Theme.typography.fontWeight.semibold,
     marginLeft: 6,
   },
+
+  adelantoTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Theme.colors.successLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  adelantoText: {
+    fontSize: 10,
+    color: Theme.colors.success,
+    fontWeight: 'bold',
+  },
 });
 
 export default DeudaCard;
+

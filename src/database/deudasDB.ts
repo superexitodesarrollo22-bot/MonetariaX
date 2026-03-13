@@ -7,17 +7,20 @@ export const insertarDeuda = async (
   interesMensual: number,
   cuotaMensual: number,
   fechaInicio: string,
+  fechaFinalizacion: string,
+  totalCuotas: number,
   cuotaActual: number = 0,
   diaPagoMensual?: number
 ): Promise<number> => {
   const db = await getDatabase();
   const result = await db.runAsync(
-    `INSERT INTO deudas (nombre, montoTotal, interesMensual, cuotaMensual, fechaInicio, pagosRealizados, cuotaActual, diaPagoMensual, activa, createdAt)
-     VALUES (?, ?, ?, ?, ?, 0, ?, ?, 1, datetime('now'))`,
-    [nombre, montoTotal, interesMensual, cuotaMensual, fechaInicio, cuotaActual, diaPagoMensual || null]
+    `INSERT INTO deudas (nombre, montoTotal, interesMensual, cuotaMensual, fechaInicio, fechaFinalizacion, totalCuotas, pagosRealizados, cuotaActual, diaPagoMensual, activa, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1, datetime('now'))`,
+    [nombre, montoTotal, interesMensual, cuotaMensual, fechaInicio, fechaFinalizacion, totalCuotas, cuotaActual, diaPagoMensual || null]
   );
   return result.lastInsertRowId;
 };
+
 
 export const obtenerDeudas = async (): Promise<Deuda[]> => {
   const db = await getDatabase();
@@ -26,21 +29,33 @@ export const obtenerDeudas = async (): Promise<Deuda[]> => {
   );
 };
 
-export const registrarPagoDeuda = async (id: number): Promise<void> => {
+export const registrarPagoDeuda = async (id: number, numCuotas: number = 1): Promise<{ deuda: Deuda; terminada: boolean } | null> => {
   const db = await getDatabase();
   const deuda = await db.getFirstAsync<Deuda>(
     `SELECT * FROM deudas WHERE id = ?`, [id]
   );
-  if (!deuda) return;
-  const totalCuotas = calcularTotalCuotas(
-    deuda.montoTotal, deuda.interesMensual, deuda.cuotaMensual
-  );
-  const nuevosPagos = deuda.pagosRealizados + 1;
-  const activa = nuevosPagos < totalCuotas ? 1 : 0;
+  if (!deuda) return null;
+  
+  const nuevosPagosRealizados = deuda.pagosRealizados + numCuotas;
+  const nuevaCuotaActual = deuda.cuotaActual + numCuotas;
+  const terminada = nuevaCuotaActual >= deuda.totalCuotas;
+  const activa = terminada ? 0 : 1;
+
   await db.runAsync(
-    `UPDATE deudas SET pagosRealizados = ?, activa = ? WHERE id = ?`,
-    [nuevosPagos, activa, id]
+    `UPDATE deudas SET pagosRealizados = ?, cuotaActual = ?, activa = ? WHERE id = ?`,
+    [nuevosPagosRealizados, nuevaCuotaActual, activa, id]
   );
+  
+  const deudaActualizada = { 
+    ...deuda, 
+    pagosRealizados: nuevosPagosRealizados,
+    cuotaActual: nuevaCuotaActual,
+    activa: activa === 1 
+  };
+  return {
+    deuda: deudaActualizada,
+    terminada: terminada && Boolean(deuda.activa) === true
+  };
 };
 
 export const eliminarDeuda = async (id: number): Promise<void> => {
@@ -48,45 +63,12 @@ export const eliminarDeuda = async (id: number): Promise<void> => {
   await db.runAsync(`UPDATE deudas SET activa = 0 WHERE id = ?`, [id]);
 };
 
-export const calcularTotalCuotas = (
-  montoTotal: number,
-  interesMensual: number,
-  cuotaMensual: number
-): number => {
-  if (interesMensual === 0) {
-    if (cuotaMensual <= 0) return 1;
-    return Math.ceil(montoTotal / cuotaMensual);
-  }
-  const tasa = interesMensual / 100;
-  const interesMinimo = montoTotal * tasa;
-  // Si la cuota no cubre ni el interés, la deuda nunca se pagaría
-  if (cuotaMensual <= interesMinimo) {
-    return 9999; // valor seguro para evitar crash
-  }
-  const n = Math.log(cuotaMensual / (cuotaMensual - montoTotal * tasa)) / Math.log(1 + tasa);
-  if (!isFinite(n) || isNaN(n) || n <= 0) return 9999;
-  return Math.ceil(n);
+export const diffInMonths = (date1: Date, date2: Date): number => {
+  const d1 = new Date(date1);
+  const d2 = new Date(date2);
+  let months = (d2.getFullYear() - d1.getFullYear()) * 12;
+  months -= d1.getMonth();
+  months += d2.getMonth();
+  return months <= 0 ? 0 : months;
 };
 
-export const calcularTotalIntereses = (
-  montoTotal: number,
-  interesMensual: number,
-  cuotaMensual: number
-): number => {
-  const totalCuotas = calcularTotalCuotas(montoTotal, interesMensual, cuotaMensual);
-  return (cuotaMensual * totalCuotas) - montoTotal;
-};
-
-export const calcularFechaFinalizacion = (
-  fechaInicio: string,
-  totalCuotas: number,
-  pagosRealizados: number
-): string => {
-  const cuotasRestantes = Math.max(totalCuotas - pagosRealizados, 0);
-  const fecha = new Date(fechaInicio);
-  if (isNaN(fecha.getTime())) return new Date().toISOString();
-  const mesesASumar = Math.min(cuotasRestantes, 1200); // máximo 100 años
-  fecha.setMonth(fecha.getMonth() + mesesASumar);
-  if (isNaN(fecha.getTime())) return new Date().toISOString();
-  return fecha.toISOString();
-};

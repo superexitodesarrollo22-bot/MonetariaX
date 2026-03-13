@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, SafeAreaView,
-  TouchableOpacity, Alert, Platform,
+  View, Text, StyleSheet, ScrollView,
+  TouchableOpacity, Alert, Platform, TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Theme from '../../theme';
 import { useFinanzasStore } from '../../store/finanzasStore';
@@ -12,91 +13,199 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import EmptyState from '../../components/common/EmptyState';
 import { formatMoney } from '../../utils/formatters';
+import { diffInMonths } from '../../database/deudasDB';
 
+
+import { Categoria, Deuda } from '../../types';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 const DeudasScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { deudas, agregarDeuda, pagarCuotaDeuda, borrarDeuda } = useFinanzasStore();
+
   const [modalVisible, setModalVisible] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
   const [confirmPagarVisible, setConfirmPagarVisible] = useState(false);
-  const [selectedDeuda, setSelectedDeuda] = useState<{ id: number; nombre: string } | null>(null);
+  const [selectedDeudaId, setSelectedDeudaId] = useState<number | null>(null);
+  const [selectedDeudaNombre, setSelectedDeudaNombre] = useState('');
+
   const [nombre, setNombre] = useState('');
   const [montoTotal, setMontoTotal] = useState('');
   const [interes, setInteres] = useState('');
   const [cuota, setCuota] = useState('');
   const [cuotaActual, setCuotaActual] = useState('');
   const [diaPago, setDiaPago] = useState('');
+  
+  const [inicioMes, setInicioMes] = useState('');
+  const [inicioAnio, setInicioAnio] = useState('');
+  const [finMes, setFinMes] = useState('');
+  const [finAnio, setFinAnio] = useState('');
+  
+  const [pagarModalVisible, setPagarModalVisible] = useState(false);
+  const [numCuotasAPagar, setNumCuotasAPagar] = useState(1);
+  const [selectedDeuda, setSelectedDeuda] = useState<Deuda | null>(null);
+
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
 
-  const totalDeudas = deudas.reduce((acc, d) => {
-    const restante = Math.max(d.cuotaMensual * (
-      Math.ceil(
-        d.interesMensual === 0
-          ? d.montoTotal / d.cuotaMensual
-          : Math.log(d.cuotaMensual / (d.cuotaMensual - d.montoTotal * (d.interesMensual / 100))) /
-            Math.log(1 + d.interesMensual / 100)
-      ) - d.pagosRealizados
-    ), 0);
-    return acc + restante;
+
+  const nombreRef = useRef<TextInput>(null);
+  const montoTotalRef = useRef<TextInput>(null);
+  const interesRef = useRef<TextInput>(null);
+  const cuotaRef = useRef<TextInput>(null);
+  const cuotaActualRef = useRef<TextInput>(null);
+  const diaPagoRef = useRef<TextInput>(null);
+  const inicioMesRef = useRef<TextInput>(null);
+  const inicioAnioRef = useRef<TextInput>(null);
+  const finMesRef = useRef<TextInput>(null);
+  const finAnioRef = useRef<TextInput>(null);
+
+
+  const totalDeudas = deudas.reduce((acc: number, d: Deuda) => {
+    const cuotasRestantes = Math.max(d.totalCuotas - d.cuotaActual, 0);
+    return acc + (cuotasRestantes * d.cuotaMensual);
   }, 0);
+
+
 
   const resetForm = () => {
     setNombre(''); setMontoTotal(''); setInteres(''); setCuota(''); setError('');
     setCuotaActual(''); setDiaPago('');
+    setInicioMes(''); setInicioAnio(''); setFinMes(''); setFinAnio('');
   };
+
 
   const handleGuardar = async () => {
-    if (!nombre.trim()) { setError('Ingresa el nombre de la deuda'); return; }
-    if (!montoTotal || isNaN(Number(montoTotal)) || Number(montoTotal) <= 0) {
-      setError('Ingresa el monto total de la deuda'); return;
+    console.log('[DEUDA] Iniciando guardado de deuda:', { 
+      nombre, montoTotal, interes, cuota, cuotaActual, diaPago,
+      inicioMes, inicioAnio, finMes, finAnio 
+    });
+
+    if (!nombre.trim()) { 
+      console.log('[DEUDA] Validación FALLIDA - campo: nombre, valor:', nombre);
+      setError('Ingresa el nombre'); return; 
     }
-    const interesNum = Number(interes) || 0;
-    const cuotaNum = Number(cuota);
-    const montoNum = Number(montoTotal);
-    if (interesNum > 0 && cuotaNum <= montoNum * (interesNum / 100)) {
-      setError(`La cuota mensual debe ser mayor a $${(montoNum * interesNum / 100).toFixed(2)} para cubrir el interés`);
+    console.log('[DEUDA] Validación OK - campo: nombre, valor:', nombre);
+
+    if (!montoTotal || isNaN(Number(montoTotal))) { 
+      console.log('[DEUDA] Validación FALLIDA - campo: montoTotal, valor:', montoTotal);
+      setError('Monto inválido'); return; 
+    }
+    console.log('[DEUDA] Validación OK - campo: montoTotal, valor:', montoTotal);
+
+    if (!cuota || isNaN(Number(cuota))) { 
+      console.log('[DEUDA] Validación FALLIDA - campo: cuota, valor:', cuota);
+      setError('Cuota inválida'); return; 
+    }
+    console.log('[DEUDA] Validación OK - campo: cuota, valor:', cuota);
+    
+    // Validar fechas
+    if (!inicioMes || !inicioAnio || !finMes || !finAnio) {
+      console.log('[DEUDA] Validación FALLIDA - fechas incompletas');
+      setError('Las fechas son obligatorias'); return;
+    }
+    
+    const dInicio = new Date(Number(inicioAnio), Number(inicioMes) - 1, 1);
+    const dFin = new Date(Number(finAnio), Number(finMes) - 1, 1);
+    
+    console.log('[DEUDA] Fechas procesadas - Inicio:', dInicio.toISOString(), 'Fin:', dFin.toISOString());
+
+    if (dFin <= dInicio) {
+      console.log('[DEUDA] Validación FALLIDA - fecha fin <= fecha inicio');
+      setError('La fecha de finalización debe ser posterior a la de inicio');
       return;
     }
-    setGuardando(true);
-    await agregarDeuda(
-      nombre.trim(),
-      Number(montoTotal),
-      Number(interes) || 0,
-      Number(cuota),
-      new Date().toISOString().split('T')[0],
-      Number(cuotaActual) || 0,
-      Number(diaPago) || undefined
-    );
-    setGuardando(false);
-    setModalVisible(false);
-    resetForm();
-  };
+    
+    const totalCuotasCalculado = diffInMonths(dInicio, dFin);
+    console.log('[DEUDA] Total cuotas calculado:', totalCuotasCalculado);
 
-  const handlePagar = (id: number, nombre: string) => {
-    setSelectedDeuda({ id, nombre });
-    setConfirmPagarVisible(true);
-  };
+    if (totalCuotasCalculado <= 0) {
+      setError('El período debe ser de al menos 1 mes');
+      return;
+    }
 
-  const onConfirmPagar = () => {
-    if (selectedDeuda) {
-      pagarCuotaDeuda(selectedDeuda.id);
-      setSelectedDeuda(null);
+    try {
+      const objetoDeuda = {
+        nombre: nombre.trim(),
+        montoTotal: Number(montoTotal),
+        interesMensual: Number(interes) || 0,
+        cuotaMensual: Number(cuota),
+        fechaInicio: dInicio.toISOString(),
+        fechaFinalizacion: dFin.toISOString(),
+        totalCuotas: totalCuotasCalculado,
+        cuotaActual: Number(cuotaActual) || 0,
+        diaPago: Number(diaPago) || undefined
+      };
+
+      console.log('[DEUDA] Intentando guardar en almacenamiento:', objetoDeuda);
+      setGuardando(true);
+
+      const idGenerado = await agregarDeuda(
+        objetoDeuda.nombre,
+        objetoDeuda.montoTotal,
+        objetoDeuda.interesMensual,
+        objetoDeuda.cuotaMensual,
+        objetoDeuda.fechaInicio,
+        objetoDeuda.fechaFinalizacion,
+        objetoDeuda.totalCuotas,
+        objetoDeuda.cuotaActual,
+        objetoDeuda.diaPago
+      );
+
+      console.log('[DEUDA] Guardado exitoso. ID:', idGenerado);
+      setGuardando(false);
+      console.log('[DEUDA] Cerrando modal y actualizando lista');
+      setModalVisible(false);
+      resetForm();
+    } catch (err: any) {
+      console.log('[DEUDA] ERROR al guardar:', err.message, err);
+      setError('Error al guardar la deuda');
+      setGuardando(false);
     }
   };
 
+
+
+  const handlePagar = (deuda: Deuda) => {
+    setSelectedDeuda(deuda);
+    setNumCuotasAPagar(1);
+    setPagarModalVisible(true);
+  };
+
+  const onConfirmPagarMulti = async () => {
+    if (selectedDeuda) {
+      const resp = await pagarCuotaDeuda(selectedDeuda.id, numCuotasAPagar);
+      setPagarModalVisible(false);
+      setSelectedDeuda(null);
+      if (resp?.terminada) {
+        Alert.alert('¡FELICIDADES!', `Terminaste de pagar ${resp.nombre}. 🥳👏`);
+      }
+    }
+  };
+
+
+
+
   const handleEliminar = (id: number, nombre: string) => {
-    setSelectedDeuda({ id, nombre });
+    setSelectedDeudaId(id);
+    setSelectedDeudaNombre(nombre);
     setConfirmDeleteVisible(true);
   };
 
+
   const onConfirmDelete = () => {
-    if (selectedDeuda) {
-      borrarDeuda(selectedDeuda.id);
-      setSelectedDeuda(null);
+    if (selectedDeudaId) {
+      const debt = deudas.find(d => d.id === selectedDeudaId);
+      borrarDeuda(selectedDeudaId, selectedDeudaNombre, (debt?.pagosRealizados ?? 0) > 0);
+      setSelectedDeudaId(null);
+      setSelectedDeudaNombre('');
+      setConfirmDeleteVisible(false);
     }
   };
+
+
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -114,28 +223,69 @@ const DeudasScreen: React.FC = () => {
       )}
 
       <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
-        {deudas.length === 0 ? (
+        {deudas.filter(d => d.activa).length === 0 && deudas.filter(d => !d.activa).length === 0 ? (
           <EmptyState
             icon="credit-card-outline"
             title="Sin deudas registradas"
             description="Registra tus créditos o préstamos para ver exactamente cuánto y cuándo terminas de pagar"
           />
         ) : (
-          deudas.map(d => (
-            <DeudaCard
-              key={d.id}
-              deuda={d}
-              onPagar={() => handlePagar(d.id, d.nombre)}
-              onEliminar={() => handleEliminar(d.id, d.nombre)}
-            />
-          ))
+          <>
+            {deudas.filter((d: Deuda) => d.activa).map((d: Deuda) => {
+              const { mesActual, anioActual, movimientos } = useFinanzasStore.getState();
+              const adelantadas = movimientos.filter((m: any) => {
+                const mDate = new Date(m.fecha);
+                return m.categoria === 'Deuda' && 
+                       m.nota?.includes(d.nombre) && 
+                       (mDate.getMonth() + 1) === mesActual && 
+                       mDate.getFullYear() === anioActual;
+              }).length;
+
+              return (
+                <DeudaCard
+                  key={d.id}
+                  deuda={d}
+                  adelantadasHoy={adelantadas}
+                  onPagar={() => handlePagar(d)}
+                  onEliminar={() => handleEliminar(d.id, d.nombre)}
+                />
+              );
+            })}
+
+
+
+            
+            {deudas.filter((d: Deuda) => !d.activa).length > 0 && (
+              <View style={styles.pagadasSection}>
+                <View style={styles.pagadasHeader}>
+                  <MaterialCommunityIcons name="check-decagram" size={20} color={Theme.colors.secondary} />
+                  <Text style={styles.pagadasTitle}>Deudas pagadas</Text>
+                </View>
+                {deudas.filter((d: Deuda) => !d.activa).map((d: Deuda) => (
+                  <React.Fragment key={`pagada-${d.id}`}>
+                    <View style={{ opacity: 0.6 }}>
+                      <DeudaCard
+                        deuda={d}
+                        onPagar={() => {}}
+                        onEliminar={() => handleEliminar(d.id, d.nombre)}
+                      />
+                    </View>
+                  </React.Fragment>
+                ))}
+
+
+              </View>
+            )}
+
+          </>
         )}
         <View style={{ height: 20 }} />
       </ScrollView>
 
+
       {/* FAB */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { bottom: 85 + insets.bottom }]}
         onPress={() => { resetForm(); setModalVisible(true); }}
         activeOpacity={0.8}
       >
@@ -147,19 +297,70 @@ const DeudasScreen: React.FC = () => {
         onClose={() => setConfirmDeleteVisible(false)}
         onConfirm={onConfirmDelete}
         title="Eliminar deuda"
-        message={`¿Estás seguro de que quieres eliminar la deuda "${selectedDeuda?.nombre}"?`}
-        confirmLabel="Eliminar"
+        message={
+          (() => {
+            const debt = deudas.find(d => d.id === selectedDeudaId);
+            const pagos = debt?.pagosRealizados ?? 0;
+            if (pagos > 0) {
+              return `Esta deuda tiene ${pagos} pago(s) registrado(s). Si la eliminas se borrarán también todos los movimientos de gasto generados por sus cuotas. ¿Deseas continuar?`;
+            }
+            return "¿Deseas eliminar esta deuda?";
+          })()
+        }
+        confirmLabel={(() => {
+          const debt = deudas.find(d => d.id === selectedDeudaId);
+          return (debt?.pagosRealizados ?? 0) > 0 ? "Sí, eliminar todo" : "Eliminar";
+        })()}
         isDanger
       />
 
-      <ConfirmationModal
-        visible={confirmPagarVisible}
-        onClose={() => setConfirmPagarVisible(false)}
-        onConfirm={onConfirmPagar}
+
+      <BottomSheet
+        visible={pagarModalVisible}
+        onClose={() => setPagarModalVisible(false)}
         title="Registrar pago"
-        message={`¿Confirmas que haz pagado la cuota de este mes de "${selectedDeuda?.nombre}"?`}
-        confirmLabel="Sí, pagado"
-      />
+      >
+        <View style={styles.modalContent}>
+          <Text style={styles.modalText}>
+            ¿Cuántas cuotas deseas pagar de <Text style={{ fontWeight: 'bold' }}>{selectedDeuda?.nombre}</Text>?
+          </Text>
+          
+          <View style={styles.counterContainer}>
+            <TouchableOpacity 
+              onPress={() => setNumCuotasAPagar(Math.max(1, numCuotasAPagar - 1))}
+              style={styles.counterBtn}
+            >
+              <MaterialCommunityIcons name="minus" size={24} color={Theme.colors.primary} />
+            </TouchableOpacity>
+            
+            <Text style={styles.counterText}>{numCuotasAPagar}</Text>
+            
+            <TouchableOpacity 
+              onPress={() => setNumCuotasAPagar(numCuotasAPagar + 1)}
+              style={styles.counterBtn}
+            >
+              <MaterialCommunityIcons name="plus" size={24} color={Theme.colors.primary} />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.totalPagarBox}>
+            <Text style={styles.totalPagarLabel}>Total a pagar ahora:</Text>
+            <Text style={styles.totalPagarValue}>
+              {formatMoney((selectedDeuda?.cuotaMensual || 0) * numCuotasAPagar)}
+            </Text>
+          </View>
+
+          <Button
+            label="Confirmar pago"
+            onPress={onConfirmPagarMulti}
+            variant="primary"
+            size="lg"
+            fullWidth
+          />
+        </View>
+      </BottomSheet>
+
+
 
       <BottomSheet
         visible={modalVisible}
@@ -168,55 +369,144 @@ const DeudasScreen: React.FC = () => {
       >
         <ScrollView showsVerticalScrollIndicator={false}>
           <Input
+            ref={nombreRef}
             label="Nombre de la deuda"
             placeholder="Ej: Préstamo banco, Tarjeta de crédito"
             value={nombre}
             onChangeText={v => { setNombre(v); setError(''); }}
             leftIcon="bank-outline"
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => montoTotalRef.current?.focus()}
           />
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flex: 1.2 }}>
+              <Input
+                ref={montoTotalRef}
+                label="Monto préstamo ($)"
+                placeholder="0.00"
+                value={montoTotal}
+                onChangeText={v => { setMontoTotal(v.replace(',', '.')); setError(''); }}
+                keyboardType="decimal-pad"
+                leftIcon="currency-usd"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => interesRef.current?.focus()}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Input
+                ref={interesRef}
+                label="Interés %"
+                placeholder="0"
+                value={interes}
+                onChangeText={v => { setInteres(v.replace(',', '.')); setError(''); }}
+                keyboardType="decimal-pad"
+                leftIcon="percent-outline"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => cuotaRef.current?.focus()}
+              />
+            </View>
+          </View>
+
           <Input
-            label="Monto total ($)"
-            placeholder="0.00"
-            value={montoTotal}
-            onChangeText={v => { setMontoTotal(v.replace(',', '.')); setError(''); }}
-            keyboardType="decimal-pad"
-            leftIcon="currency-usd"
-          />
-          <Input
-            label="Interés mensual (% — opcional, pon 0 si no hay)"
-            placeholder="0"
-            value={interes}
-            onChangeText={v => { setInteres(v.replace(',', '.')); setError(''); }}
-            keyboardType="decimal-pad"
-            leftIcon="percent-outline"
-          />
-          <Input
-            label="Cuota mensual ($)"
+            ref={cuotaRef}
+            label="Cuota mensual pactada ($)"
             placeholder="0.00"
             value={cuota}
             onChangeText={v => { setCuota(v.replace(',', '.')); setError(''); }}
             keyboardType="decimal-pad"
             leftIcon="calendar-month-outline"
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => inicioMesRef.current?.focus()}
           />
+
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fieldLabel}>Mes inicio</Text>
+              <Input
+                ref={inicioMesRef}
+                placeholder="MM (1-12)"
+                value={inicioMes}
+                onChangeText={setInicioMes}
+                keyboardType="number-pad"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => inicioAnioRef.current?.focus()}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fieldLabel}>Año inicio</Text>
+              <Input
+                ref={inicioAnioRef}
+                placeholder="YYYY"
+                value={inicioAnio}
+                onChangeText={setInicioAnio}
+                keyboardType="number-pad"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => finMesRef.current?.focus()}
+              />
+            </View>
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fieldLabel}>Mes fin</Text>
+              <Input
+                ref={finMesRef}
+                placeholder="MM (1-12)"
+                value={finMes}
+                onChangeText={setFinMes}
+                keyboardType="number-pad"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => finAnioRef.current?.focus()}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fieldLabel}>Año fin</Text>
+              <Input
+                ref={finAnioRef}
+                placeholder="YYYY"
+                value={finAnio}
+                onChangeText={setFinAnio}
+                keyboardType="number-pad"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => cuotaActualRef.current?.focus()}
+              />
+            </View>
+          </View>
+
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1 }}>
               <Input
+                ref={cuotaActualRef}
                 label="Cuota actual"
                 placeholder="Ej: 3"
                 value={cuotaActual}
                 onChangeText={setCuotaActual}
                 keyboardType="number-pad"
                 leftIcon="numeric"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => diaPagoRef.current?.focus()}
               />
             </View>
             <View style={{ flex: 1 }}>
               <Input
-                label="Día de pago"
+                ref={diaPagoRef}
+                label="Día vencimiento"
                 placeholder="1-31"
                 value={diaPago}
                 onChangeText={setDiaPago}
                 keyboardType="number-pad"
                 leftIcon="clock-outline"
+                returnKeyType="done"
+                onSubmitEditing={handleGuardar}
               />
             </View>
           </View>
@@ -226,7 +516,7 @@ const DeudasScreen: React.FC = () => {
           ) : null}
 
           <Button
-            label="Guardar deuda"
+            label="Registrar deuda"
             onPress={handleGuardar}
             variant="primary"
             size="lg"
@@ -236,6 +526,7 @@ const DeudasScreen: React.FC = () => {
           <View style={{ height: Theme.spacing.md }} />
         </ScrollView>
       </BottomSheet>
+
     </SafeAreaView>
   );
 };
@@ -253,9 +544,9 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 95 : 75,
     right: 24,
     width: 58,
+
     height: 58,
     borderRadius: 29,
     backgroundColor: Theme.colors.primary,
@@ -298,7 +589,82 @@ const styles = StyleSheet.create({
     marginBottom: Theme.spacing.sm,
     textAlign: 'center',
   },
+  pagadasSection: {
+    marginTop: Theme.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.border,
+    paddingTop: Theme.spacing.md,
+  },
+  pagadasHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: Theme.spacing.md,
+    marginLeft: 4,
+  },
+  pagadasTitle: {
+    fontSize: Theme.typography.fontSize.base,
+    fontWeight: Theme.typography.fontWeight.bold,
+    color: Theme.colors.textLight,
+  },
+  modalContent: {
+    paddingVertical: 10,
+  },
+  modalText: {
+    fontSize: 16,
+    color: Theme.colors.text,
+    marginBottom: 15,
+  },
+  counterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 20,
+    marginBottom: 25,
+  },
+  counterText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Theme.colors.text,
+  },
+  counterBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Theme.colors.background,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  totalPagarBox: {
+    backgroundColor: Theme.colors.successLight,
+    padding: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 25,
+  },
+  totalPagarLabel: {
+    fontSize: 14,
+    color: Theme.colors.secondary,
+    marginBottom: 5,
+  },
+  totalPagarValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Theme.colors.secondary,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: Theme.colors.textLight,
+    marginBottom: 4,
+    marginLeft: 4,
+  },
 });
+
+
+
 
 
 export default DeudasScreen;

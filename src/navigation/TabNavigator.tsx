@@ -11,6 +11,8 @@ import DeudasScreen from '../screens/Deudas/DeudasScreen';
 import AnalisisScreen from '../screens/Analisis/AnalisisScreen';
 import HistoricoScreen from '../screens/Historico/HistoricoScreen';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 const Tab = createBottomTabNavigator();
 
 const tabs = [
@@ -29,13 +31,6 @@ const tabs = [
     label: 'Movimientos',
   },
   {
-    name: 'Historico',
-    component: HistoricoScreen,
-    icon: 'calendar-clock-outline',
-    iconActive: 'calendar-clock',
-    label: 'Histórico',
-  },
-  {
     name: 'Deudas',
     component: DeudasScreen,
     icon: 'credit-card-outline',
@@ -49,43 +44,57 @@ const tabs = [
     iconActive: 'chart-box',
     label: 'Análisis',
   },
+  {
+    name: 'Historico',
+    component: HistoricoScreen,
+    icon: 'calendar-clock-outline',
+    iconActive: 'calendar-clock',
+    label: 'Histórico',
+  },
 ];
 
-
-const TabNavigator: React.FC = () => (
-  <Tab.Navigator
-    screenOptions={({ route }) => {
-      const tab = tabs.find(t => t.name === route.name)!;
-      return {
-        headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: Theme.colors.primary,
-        tabBarInactiveTintColor: Theme.colors.textLight,
-        tabBarLabelStyle: styles.tabLabel,
-        tabBarIcon: ({ focused, color, size }) => (
-          <MaterialCommunityIcons
-            name={(focused ? tab.iconActive : tab.icon) as any}
-            size={26}
-            color={color}
-          />
-        ),
-        tabBarLabel: tab.label,
-      };
-    }}
-  >
-    {tabs.map(tab => (
-      <Tab.Screen key={tab.name} name={tab.name} component={tab.component} />
-    ))}
-  </Tab.Navigator>
-);
+const TabNavigator: React.FC = () => {
+  const insets = useSafeAreaInsets();
+  
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => {
+        const tab = tabs.find(t => t.name === route.name)!;
+        return {
+          headerShown: false,
+          tabBarStyle: [
+            styles.tabBar,
+            { 
+              height: 64 + (insets.bottom > 0 ? insets.bottom - 4 : 4), 
+              paddingBottom: insets.bottom || 8 
+            }
+          ],
+          tabBarActiveTintColor: Theme.colors.primary,
+          tabBarInactiveTintColor: Theme.colors.textLight,
+          tabBarLabelStyle: styles.tabLabel,
+          tabBarIcon: ({ focused, color, size }) => (
+            <MaterialCommunityIcons
+              name={(focused ? tab.iconActive : tab.icon) as any}
+              size={26}
+              color={color}
+            />
+          ),
+          tabBarLabel: tab.label,
+        };
+      }}
+    >
+      {tabs.map(tab => (
+        <Tab.Screen key={tab.name} name={tab.name} component={tab.component} />
+      ))}
+    </Tab.Navigator>
+  );
+};
 
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: Theme.colors.card,
     borderTopColor: Theme.colors.border,
     borderTopWidth: 1,
-    height: Platform.OS === 'ios' ? 84 : 64,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 8,
     paddingTop: 8,
     shadowColor: Theme.colors.primary,
     shadowOffset: { width: 0, height: -4 },
@@ -98,5 +107,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
 
 export default TabNavigator;

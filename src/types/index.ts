@@ -20,7 +20,9 @@ export type Categoria =
   | 'salud'
   | 'educacion'
   | 'ahorro'
+  | 'deuda'
   | 'otro';
+
 
 export interface Movimiento {
   id: number;
@@ -40,13 +42,16 @@ export interface Deuda {
   montoTotal: number;
   interesMensual: number;
   cuotaMensual: number;
-  fechaInicio: string;
-  pagosRealizados: number;
-  cuotaActual: number; // Nueva: 3 de 12
-  diaPagoMensual?: number; // Nueva: Día del mes (1-31)
+  fechaInicio: string; // ISO string (YYYY-MM-DD)
+  fechaFinalizacion: string; // ISO string (YYYY-MM-DD) - Fecha fija pactada
+  totalCuotas: number; // Calculado al inicio
+  pagosRealizados: number; // Cuántas cuotas se han pagado DESDE el registro en la app
+  cuotaActual: number; // En qué número de cuota va actualmente (contando las previas)
+  diaPagoMensual?: number;
   activa: boolean;
   createdAt: string;
 }
+
 
 export interface Presupuesto {
   id: number;

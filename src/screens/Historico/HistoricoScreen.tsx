@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, SafeAreaView,
+  View, Text, StyleSheet, ScrollView,
   TouchableOpacity, Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Theme from '../../theme';
 import { useFinanzasStore } from '../../store/finanzasStore';
@@ -16,7 +19,9 @@ const HistoricoScreen: React.FC = () => {
   const [selectedAnio, setSelectedAnio] = useState(new Date().getFullYear());
   const [resumen, setResumen] = useState({ totalIngresos: 0, totalGastos: 0, balance: 0 });
   const [numMovimientos, setNumMovimientos] = useState(0);
+  const [pagosDeuda, setPagosDeuda] = useState<any[]>([]);
   const [cargando, setCargando] = useState(false);
+
 
   const MESES = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -25,18 +30,27 @@ const HistoricoScreen: React.FC = () => {
 
   const ANIOS = [2024, 2025, 2026];
 
-  useEffect(() => {
-    cargarDatos();
-  }, [selectedMes, selectedAnio]);
-
   const cargarDatos = async () => {
     setCargando(true);
     const res = await obtenerResumenMes(selectedMes, selectedAnio);
     const movs = await obtenerMovimientosPorMes(selectedMes, selectedAnio);
     setResumen(res);
     setNumMovimientos(movs.length);
+    setPagosDeuda(movs.filter(m => m.categoria === 'Deuda' || m.categoria === 'deuda'));
+
     setCargando(false);
   };
+
+  useEffect(() => {
+    cargarDatos();
+  }, [selectedMes, selectedAnio]);
+
+  useFocusEffect(
+    useCallback(() => {
+      cargarDatos();
+    }, [selectedMes, selectedAnio])
+  );
+
 
   const cambiarMes = (diff: number) => {
     let nextMes = selectedMes + diff;
@@ -113,11 +127,36 @@ const HistoricoScreen: React.FC = () => {
                   <Text style={styles.statLabel}>Movimientos</Text>
                 </View>
                 <View style={styles.statBox}>
-                  <Text style={styles.statValue}>-</Text>
-                  <Text style={styles.statLabel}>Deudas pagadas</Text>
+                  <Text style={styles.statValue}>{pagosDeuda.length}</Text>
+                  <Text style={styles.statLabel}>Pagos de deuda</Text>
                 </View>
+
               </View>
             </Card>
+
+            {pagosDeuda.length > 0 && (
+              <Card style={styles.card}>
+
+                <Text style={styles.cardTitle}>Detalle de Pagos</Text>
+                {pagosDeuda.map((p: any, idx: number) => (
+                  <React.Fragment key={p.id || idx}>
+                    <View style={styles.pagoItem}>
+                      <View style={styles.pagoIcon}>
+                        <MaterialCommunityIcons name="credit-card-check-outline" size={20} color={Theme.colors.secondary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.pagoNombre}>{p.nota}</Text>
+                        <Text style={styles.pagoTag}>💳 Pago de cuota</Text>
+                      </View>
+                      <Text style={styles.pagoMonto}>-{formatMoney(p.monto)}</Text>
+                    </View>
+                    {idx < pagosDeuda.length - 1 && <View style={styles.divider} />}
+                  </React.Fragment>
+                ))}
+
+              </Card>
+            )}
+
 
             <View style={styles.infoBox}>
               <MaterialCommunityIcons name="information-outline" size={18} color={Theme.colors.textLight} />
@@ -239,6 +278,37 @@ const styles = StyleSheet.create({
     color: Theme.colors.textLight,
     fontStyle: 'italic',
   },
+  pagoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 12,
+  },
+  pagoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E0FFF7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pagoNombre: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Theme.colors.text,
+  },
+  pagoTag: {
+    fontSize: 11,
+    color: Theme.colors.secondary,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  pagoMonto: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Theme.colors.danger,
+  },
 });
+
 
 export default HistoricoScreen;

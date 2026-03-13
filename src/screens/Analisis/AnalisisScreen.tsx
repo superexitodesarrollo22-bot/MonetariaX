@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, SafeAreaView,
+  View, Text, StyleSheet, ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Theme from '../../theme';
 import { useFinanzasStore } from '../../store/finanzasStore';

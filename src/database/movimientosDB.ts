@@ -98,10 +98,20 @@ export const obtenerGastosPorCategoria = async (
   );
 };
 
+export const eliminarMovimientosPorDeuda = async (nombreDeuda: string): Promise<void> => {
+  const db = await getDatabase();
+  await db.runAsync(
+    `DELETE FROM movimientos WHERE categoria = 'deuda' AND nota LIKE ?`,
+    [`% - ${nombreDeuda}`]
+  );
+};
+
 export const eliminarMovimiento = async (id: number): Promise<void> => {
   const db = await getDatabase();
   await db.runAsync(`DELETE FROM movimientos WHERE id = ?`, [id]);
 };
+
+
 
 export const obtenerAnalisisHormiga = async (
   mes: number,

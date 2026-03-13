@@ -34,6 +34,8 @@ const initDatabase = async (database: SQLite.SQLiteDatabase): Promise<void> => {
       interesMensual REAL NOT NULL DEFAULT 0,
       cuotaMensual REAL NOT NULL,
       fechaInicio TEXT NOT NULL,
+      fechaFinalizacion TEXT,
+      totalCuotas INTEGER,
       pagosRealizados INTEGER NOT NULL DEFAULT 0,
       cuotaActual INTEGER NOT NULL DEFAULT 0,
       diaPagoMensual INTEGER,
@@ -41,20 +43,8 @@ const initDatabase = async (database: SQLite.SQLiteDatabase): Promise<void> => {
       createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    -- Migraciones manuales para bases existentes
-    -- (Intentamos agregar columnas ignorando errores si ya existen)
-    -- SQLite no permite IF NOT EXISTS en ALTER TABLE directamente en versiones antiguas
-    -- Pero expo-sqlite maneja bien las exec individuales.
-    
-    -- Movimientos
-    ALTER TABLE movimientos ADD COLUMN recurrencia TEXT DEFAULT 'ninguna';
-    ALTER TABLE movimientos ADD COLUMN fechaLimitePago TEXT;
-
-    -- Deudas
-    ALTER TABLE deudas ADD COLUMN cuotaActual INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE deudas ADD COLUMN diaPagoMensual INTEGER;
-
     CREATE TABLE IF NOT EXISTS presupuestos (
+
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       categoria TEXT NOT NULL,
       montoLimite REAL NOT NULL,

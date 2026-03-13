@@ -47,9 +47,10 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 onClose();
               }}
               variant={isDanger ? 'danger' : 'primary'}
-              size="base"
-              style={{ flex: 1 }}
+              size="lg"
+              style={{ flex: 1.2 }}
             />
+
           </View>
         </View>
       </View>
@@ -94,15 +95,17 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelText: {
-    fontSize: Theme.typography.fontSize.base,
+    fontSize: 16,
     fontWeight: Theme.typography.fontWeight.semibold,
     color: Theme.colors.textLight,
   },
+
 });
 
 export default ConfirmationModal;

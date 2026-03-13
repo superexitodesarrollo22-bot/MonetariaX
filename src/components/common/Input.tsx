@@ -15,10 +15,10 @@ interface InputProps extends TextInputProps {
   containerStyle?: ViewStyle;
 }
 
-const Input: React.FC<InputProps> = ({
+const Input = React.forwardRef<TextInput, InputProps>(({
   label, error, leftIcon, rightIcon, onRightIconPress,
   containerStyle, ...props
-}) => {
+}, ref) => {
   const [focused, setFocused] = useState(false);
 
   return (
@@ -39,6 +39,7 @@ const Input: React.FC<InputProps> = ({
         )}
         <TextInput
           {...props}
+          ref={ref}
           style={[styles.input, leftIcon && { paddingLeft: 0 }]}
           placeholderTextColor={Theme.colors.textLight}
           onFocus={() => setFocused(true)}
@@ -53,7 +54,8 @@ const Input: React.FC<InputProps> = ({
       {error && <Text style={styles.error}>{error}</Text>}
     </View>
   );
-};
+});
+
 
 const styles = StyleSheet.create({
   container: { marginBottom: Theme.spacing.md },

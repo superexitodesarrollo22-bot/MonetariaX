@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, SafeAreaView, Platform,
+  Alert, Platform, TextInput,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Theme from '../../theme';
 import { useFinanzasStore } from '../../store/finanzasStore';
@@ -13,11 +14,13 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import EmptyState from '../../components/common/EmptyState';
 import { Categoria, CategoriaIngreso, TipoMovimiento, Recurrencia } from '../../types';
-
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 
+
 const MovimientosScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { movimientos, agregarMovimiento, borrarMovimiento, cargando, resumenMes } = useFinanzasStore();
+
   const [modalVisible, setModalVisible] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
   const [idToDelete, setIdToDelete] = useState<number | null>(null);
@@ -30,6 +33,10 @@ const MovimientosScreen: React.FC = () => {
   const [idEdicion, setIdEdicion] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
+
+  const montoRef = useRef<TextInput>(null);
+  const notaRef = useRef<TextInput>(null);
+  const diaLimiteRef = useRef<TextInput>(null);
 
   const resetForm = () => {
     setMonto(''); setCategoria(null); setNota(''); setError('');
@@ -136,7 +143,7 @@ const MovimientosScreen: React.FC = () => {
 
       {/* FAB */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { bottom: 85 + insets.bottom }]}
         onPress={() => { resetForm(); setModalVisible(true); }}
         activeOpacity={0.8}
       >
@@ -199,12 +206,16 @@ const MovimientosScreen: React.FC = () => {
 
           {/* Monto */}
           <Input
+            ref={montoRef}
             label="Monto ($)"
             placeholder="0.00"
             value={monto}
             onChangeText={v => { setMonto(v.replace(',', '.')); setError(''); }}
             keyboardType="decimal-pad"
             leftIcon="currency-usd"
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => notaRef.current?.focus()}
           />
 
           {/* Categorías */}
@@ -213,11 +224,21 @@ const MovimientosScreen: React.FC = () => {
 
           {/* Nota */}
           <Input
+            ref={notaRef}
             label="Nota (opcional)"
             placeholder="Ej: almuerzo con clientes"
             value={nota}
             onChangeText={setNota}
             leftIcon="pencil-outline"
+            returnKeyType={recurrencia === 'ninguna' ? 'done' : 'next'}
+            blurOnSubmit={recurrencia === 'ninguna'}
+            onSubmitEditing={() => {
+              if (recurrencia === 'ninguna') {
+                handleGuardar();
+              } else {
+                diaLimiteRef.current?.focus();
+              }
+            }}
           />
 
           {/* Recurrencia */}
@@ -241,12 +262,15 @@ const MovimientosScreen: React.FC = () => {
 
           {recurrencia !== 'ninguna' && (
             <Input
+              ref={diaLimiteRef}
               label="Día del mes (Límite de pago)"
               placeholder="Ej: 15"
               value={diaLimite}
               onChangeText={setDiaLimite}
               keyboardType="number-pad"
               leftIcon="calendar-clock"
+              returnKeyType="done"
+              onSubmitEditing={handleGuardar}
             />
           )}
 
@@ -282,9 +306,7 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 95 : 75,
     right: 24,
-
     width: 58,
     height: 58,
     borderRadius: 29,
