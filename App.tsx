@@ -7,12 +7,20 @@ import { registerForPushNotificationsAsync } from './src/utils/notifications';
 import { processRecurringMovements } from './src/utils/recurringMovs';
 import { useFinanzasStore } from './src/store/finanzasStore';
 
+import Constants from 'expo-constants';
+
+const isExpoGo = Constants.appOwnership === 'expo';
+
 export default function App() {
   const cargarTodo = useFinanzasStore(state => state.cargarTodo);
 
   useEffect(() => {
     const init = async () => {
-      await registerForPushNotificationsAsync();
+      if (isExpoGo) {
+        console.log('[DEV] Notificaciones desactivadas en Expo Go');
+      } else {
+        await registerForPushNotificationsAsync();
+      }
       await processRecurringMovements();
       await cargarTodo();
     };

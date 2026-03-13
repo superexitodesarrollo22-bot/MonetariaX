@@ -1,18 +1,26 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+const isExpoGo = Constants.appOwnership === 'expo';
+
+if (isExpoGo) {
+  console.log('[DEV] Notificaciones desactivadas en Expo Go');
+} else {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 export const registerForPushNotificationsAsync = async () => {
+  if (isExpoGo) return false;
   if (!Device.isDevice) return false;
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -50,6 +58,11 @@ export const scheduleFinancialStrategy = async (type: 'oro' | 'dia') => {
   const randomStrategy = strategies[Math.floor(Math.random() * strategies.length)];
   const title = type === 'oro' ? "💡 Estrategia de Oro" : "🎯 Estrategia del Día";
 
+  if (isExpoGo) {
+    console.log(`[DEV] Notificación omitida en Expo Go: ${title}`);
+    return;
+  }
+
   await Notifications.scheduleNotificationAsync({
     content: {
       title,
@@ -64,6 +77,11 @@ export const schedulePaymentAlert = async (name: string, date: number, amount: n
   const body = isDebt 
     ? `Vence cuota ${cuota} de ${name} el día ${date}. Monto: $${amount.toFixed(2)}.`
     : `Recuerda pagar ${name} antes del ${date}. Monto aproximado: $${amount.toFixed(2)}.`;
+
+  if (isExpoGo) {
+    console.log(`[DEV] Notificación omitida en Expo Go: ${title}`);
+    return;
+  }
 
   await Notifications.scheduleNotificationAsync({
     content: { title, body },
