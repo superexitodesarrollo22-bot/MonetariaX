@@ -9,7 +9,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Theme from '../../theme';
 import { useFinanzasStore } from '../../store/finanzasStore';
 import { useConfigStore } from '../../store/configStore';
+import { Deuda } from '../../types';
 import HeroCard from '../../components/common/HeroCard';
+
 import SummaryRow from '../../components/common/SummaryRow';
 import MovimientoItem from '../../components/common/MovimientoItem';
 import Card from '../../components/common/Card';
@@ -29,13 +31,15 @@ const DashboardScreen: React.FC = () => {
   } = useFinanzasStore();
   const { config } = useConfigStore();
 
-  const totalDeudas = deudas.reduce((acc, d) => {
+  const totalDeudas = deudas.reduce((acc: number, d: Deuda) => {
     const restante = d.montoTotal - (d.pagosRealizados * d.cuotaMensual);
     return acc + Math.max(restante, 0);
   }, 0);
 
+
   const mesNombre = `${MESES[mesActual - 1]} ${anioActual}`;
   const ultimos = movimientos.slice(0, 5);
+
 
   if (cargando && movimientos.length === 0) return <DashboardSkeleton />;
 
@@ -110,8 +114,11 @@ const DashboardScreen: React.FC = () => {
             description="Registra tu primer ingreso o gasto tocando la pestaña Movimientos"
           />
         ) : (
-          ultimos.map(m => (
-            <MovimientoItem key={m.id} movimiento={m} />
+          ultimos.map((m: any) => (
+            <MovimientoItem
+              key={m.id}
+              movimiento={m}
+            />
           ))
         )}
 

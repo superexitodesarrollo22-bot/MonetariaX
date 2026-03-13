@@ -129,7 +129,7 @@ const MovimientosScreen: React.FC = () => {
             description="Toca el botón + para registrar tu primer ingreso o gasto"
           />
         ) : (
-          movimientos.map(m => (
+          movimientos.map((m: any) => (
             <MovimientoItem
               key={m.id}
               movimiento={m}
@@ -137,6 +137,7 @@ const MovimientosScreen: React.FC = () => {
               onDelete={() => handleEliminar(m.id)}
             />
           ))
+
         )}
         <View style={{ height: 20 }} />
       </ScrollView>
@@ -210,7 +211,8 @@ const MovimientosScreen: React.FC = () => {
             label="Monto ($)"
             placeholder="0.00"
             value={monto}
-            onChangeText={v => { setMonto(v.replace(',', '.')); setError(''); }}
+            onChangeText={(v: string) => { setMonto(v.replace(',', '.')); setError(''); }}
+
             keyboardType="decimal-pad"
             leftIcon="currency-usd"
             returnKeyType="next"
@@ -220,7 +222,8 @@ const MovimientosScreen: React.FC = () => {
 
           {/* Categorías */}
           <Text style={styles.catLabel}>Categoría</Text>
-          <CategorySelector selected={categoria} onSelect={c => { setCategoria(c); setError(''); }} tipo={tipo} />
+          <CategorySelector selected={categoria}          onSelect={(c: any) => { setCategoria(c); setError(''); }}
+ tipo={tipo} />
 
           {/* Nota */}
           <Input

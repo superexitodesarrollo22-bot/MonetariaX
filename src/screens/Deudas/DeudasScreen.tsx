@@ -197,7 +197,8 @@ const DeudasScreen: React.FC = () => {
 
   const onConfirmDelete = () => {
     if (selectedDeudaId) {
-      const debt = deudas.find(d => d.id === selectedDeudaId);
+      const debt = deudas.find((d: Deuda) => d.id === selectedDeudaId);
+
       borrarDeuda(selectedDeudaId, selectedDeudaNombre, (debt?.pagosRealizados ?? 0) > 0);
       setSelectedDeudaId(null);
       setSelectedDeudaNombre('');
@@ -223,7 +224,8 @@ const DeudasScreen: React.FC = () => {
       )}
 
       <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
-        {deudas.filter(d => d.activa).length === 0 && deudas.filter(d => !d.activa).length === 0 ? (
+        {deudas.filter((d: Deuda) => d.activa).length === 0 && deudas.filter((d: Deuda) => !d.activa).length === 0 ? (
+
           <EmptyState
             icon="credit-card-outline"
             title="Sin deudas registradas"
@@ -299,7 +301,8 @@ const DeudasScreen: React.FC = () => {
         title="Eliminar deuda"
         message={
           (() => {
-            const debt = deudas.find(d => d.id === selectedDeudaId);
+            const debt = deudas.find((d: Deuda) => d.id === selectedDeudaId);
+
             const pagos = debt?.pagosRealizados ?? 0;
             if (pagos > 0) {
               return `Esta deuda tiene ${pagos} pago(s) registrado(s). Si la eliminas se borrarán también todos los movimientos de gasto generados por sus cuotas. ¿Deseas continuar?`;
@@ -308,7 +311,8 @@ const DeudasScreen: React.FC = () => {
           })()
         }
         confirmLabel={(() => {
-          const debt = deudas.find(d => d.id === selectedDeudaId);
+          const debt = deudas.find((d: Deuda) => d.id === selectedDeudaId);
+
           return (debt?.pagosRealizados ?? 0) > 0 ? "Sí, eliminar todo" : "Eliminar";
         })()}
         isDanger
@@ -373,7 +377,8 @@ const DeudasScreen: React.FC = () => {
             label="Nombre de la deuda"
             placeholder="Ej: Préstamo banco, Tarjeta de crédito"
             value={nombre}
-            onChangeText={v => { setNombre(v); setError(''); }}
+            onChangeText={(v: string) => { setNombre(v); setError(''); }}
+
             leftIcon="bank-outline"
             returnKeyType="next"
             blurOnSubmit={false}
@@ -386,7 +391,8 @@ const DeudasScreen: React.FC = () => {
                 label="Monto préstamo ($)"
                 placeholder="0.00"
                 value={montoTotal}
-                onChangeText={v => { setMontoTotal(v.replace(',', '.')); setError(''); }}
+                onChangeText={(v: string) => { setMontoTotal(v.replace(',', '.')); setError(''); }}
+
                 keyboardType="decimal-pad"
                 leftIcon="currency-usd"
                 returnKeyType="next"
@@ -400,7 +406,8 @@ const DeudasScreen: React.FC = () => {
                 label="Interés %"
                 placeholder="0"
                 value={interes}
-                onChangeText={v => { setInteres(v.replace(',', '.')); setError(''); }}
+                onChangeText={(v: string) => { setInteres(v.replace(',', '.')); setError(''); }}
+
                 keyboardType="decimal-pad"
                 leftIcon="percent-outline"
                 returnKeyType="next"
@@ -415,7 +422,8 @@ const DeudasScreen: React.FC = () => {
             label="Cuota mensual pactada ($)"
             placeholder="0.00"
             value={cuota}
-            onChangeText={v => { setCuota(v.replace(',', '.')); setError(''); }}
+            onChangeText={(v: string) => { setCuota(v.replace(',', '.')); setError(''); }}
+
             keyboardType="decimal-pad"
             leftIcon="calendar-month-outline"
             returnKeyType="next"

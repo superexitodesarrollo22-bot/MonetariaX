@@ -11,6 +11,7 @@ export const getDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
 };
 
 const initDatabase = async (database: SQLite.SQLiteDatabase): Promise<void> => {
+  // 1. Crear tablas base si no existen
   await database.execAsync(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;
@@ -22,8 +23,6 @@ const initDatabase = async (database: SQLite.SQLiteDatabase): Promise<void> => {
       categoria TEXT NOT NULL,
       nota TEXT,
       fecha TEXT NOT NULL,
-      recurrencia TEXT DEFAULT 'ninguna',
-      fechaLimitePago TEXT,
       createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -44,7 +43,6 @@ const initDatabase = async (database: SQLite.SQLiteDatabase): Promise<void> => {
     );
 
     CREATE TABLE IF NOT EXISTS presupuestos (
-
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       categoria TEXT NOT NULL,
       montoLimite REAL NOT NULL,
@@ -65,4 +63,23 @@ const initDatabase = async (database: SQLite.SQLiteDatabase): Promise<void> => {
       ('biometriaActiva', '0'),
       ('notificacionesActivas', '1');
   `);
+
+  // 2. Migraciones individuales (ignorar errores si la columna ya existe)
+  const migrations = [
+    "ALTER TABLE movimientos ADD COLUMN recurrencia TEXT DEFAULT 'ninguna'",
+    "ALTER TABLE movimientos ADD COLUMN fechaLimitePago TEXT",
+    "ALTER TABLE deudas ADD COLUMN cuotaActual INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE deudas ADD COLUMN diaPagoMensual INTEGER",
+    "ALTER TABLE deudas ADD COLUMN fechaFinalizacion TEXT",
+    "ALTER TABLE deudas ADD COLUMN totalCuotas INTEGER"
+  ];
+
+  for (const sql of migrations) {
+    try {
+      await database.execAsync(sql);
+    } catch (e) {
+      // Ignorar errores (probablemente la columna ya existe)
+    }
+  }
 };
+

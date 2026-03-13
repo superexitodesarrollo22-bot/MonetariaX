@@ -47,11 +47,12 @@ const AnalisisScreen: React.FC = () => {
   const mesNombre = `${MESES[mesActual - 1]} ${anioActual}`;
 
   // Barras de categorías
-  const chartData = gastosPorCategoria.slice(0, 7).map((item, i) => ({
+  const chartData = gastosPorCategoria.slice(0, 7).map((item: any, i: number) => ({
     label: item.categoria,
     value: item.total,
     color: CAT_COLORS[i % CAT_COLORS.length],
   }));
+
 
   // Alertas generadas
   const alertas = useMemo(() => {
@@ -107,9 +108,10 @@ const AnalisisScreen: React.FC = () => {
               <MaterialCommunityIcons name="bell-outline" size={16} /> Alertas resumidas
             </Text>
             <View style={styles.alertContainer}>
-              {alertas.map((a, i) => (
+              {alertas.map((a: any, i: number) => (
                 <AlertCard key={i} type={a.type} title={a.title} message={a.message} compact />
               ))}
+
             </View>
           </View>
         )}
