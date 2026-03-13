@@ -1,7 +1,7 @@
 import { obtenerMovimientos, insertarMovimiento } from '../database/movimientosDB';
 import { obtenerDeudas } from '../database/deudasDB';
 import { Movimiento } from '../types';
-import { schedulePaymentAlert } from './notifications';
+import { schedulePaymentAlert } from '../../notifications.service';
 
 export const processRecurringMovements = async () => {
   const movimientos = await obtenerMovimientos(200);

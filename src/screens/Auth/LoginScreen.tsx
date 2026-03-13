@@ -9,6 +9,8 @@ import Theme from '../../theme';
 import { useAuthStore } from '../../store/authStore';
 import { useConfigStore } from '../../store/configStore';
 
+import PinPad from '../../components/common/PinPad';
+
 const { height } = Dimensions.get('window');
 
 interface LoginScreenProps {
@@ -21,22 +23,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
     cargando, error, setAutenticado,
   } = useAuthStore();
   const { config } = useConfigStore();
+  
+  const [showPin, setShowPin] = React.useState(!biometriaActiva || !biometriaDisponible);
+  const [pinError, setPinError] = React.useState(false);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    console.log('biometriaDisponible:', biometriaDisponible, 'biometriaActiva:', biometriaActiva);
-    
     Animated.timing(opacityAnim, {
       toValue: 1, duration: 600, useNativeDriver: true,
     }).start();
 
-    // Solo intentar automático si ambas están activas
-    if (biometriaDisponible && biometriaActiva) {
+    if (biometriaDisponible && biometriaActiva && !showPin) {
       setTimeout(() => handleAuth(), 500);
     }
-  }, [biometriaDisponible, biometriaActiva]);
+  }, [biometriaDisponible, biometriaActiva, showPin]);
 
   const pulseBtnAnim = () => {
     Animated.sequence([
@@ -46,29 +48,31 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
   };
 
   const handleAuth = async () => {
-    pulseBtnAnim();
-    
-    // Si no hay biometría disponible en el dispositivo, entrar directo
-    if (!biometriaDisponible) {
-      console.log('Biometría no disponible, saltando...');
+    if (biometriaDisponible && biometriaActiva) {
+      const success = await autenticar();
+      if (success) {
+        onSuccess();
+      } else {
+        // Fallback to PIN if biometric fails
+        if (config.pin) setShowPin(true);
+      }
+    } else if (config.pin) {
+      setShowPin(true);
+    } else {
+      // No security set? (shouldn't happen with new logic)
       setAutenticado(true);
       onSuccess();
-      return;
     }
-
-    // Si está disponible pero no activa, entrar directo al presionar
-    if (!biometriaActiva) {
-      setAutenticado(true);
-      onSuccess();
-      return;
-    }
-
-    const success = await autenticar();
-    if (success) onSuccess();
   };
 
-  const getBiometriaIcon = () => {
-    return 'fingerprint';
+  const onPinComplete = (enteredPin: string) => {
+    if (enteredPin === config.pin) {
+      setAutenticado(true);
+      onSuccess();
+    } else {
+      setPinError(true);
+      setTimeout(() => setPinError(false), 1000);
+    }
   };
 
   return (
@@ -82,56 +86,60 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
       </View>
 
       <View style={styles.body}>
-        <TouchableOpacity
-          onPress={handleAuth}
-          disabled={cargando}
-          activeOpacity={0.85}
-        >
-          <Animated.View style={[
-            styles.fingerprintBtn,
-            { transform: [{ scale: pulseAnim }] },
-            cargando && styles.fingerprintBtnLoading,
-          ]}>
-            <MaterialCommunityIcons
-              name={getBiometriaIcon() as any}
-              size={64}
-              color={cargando ? Theme.colors.textLight : Theme.colors.primary}
-            />
-          </Animated.View>
-        </TouchableOpacity>
-
-        <Text style={styles.instruction}>
-          {biometriaDisponible && biometriaActiva
-            ? 'Toca para usar tu huella dactilar'
-            : 'Toca para ingresar'}
-        </Text>
-
-        {error && (
-          <View style={styles.errorWrap}>
-            <MaterialCommunityIcons
-              name="alert-circle-outline"
-              size={16}
-              color={Theme.colors.danger}
-            />
-            <Text style={styles.errorText}>{error}</Text>
+        {!showPin ? (
+          <>
+            <TouchableOpacity
+              onPress={() => {
+                pulseBtnAnim();
+                handleAuth();
+              }}
+              disabled={cargando}
+              activeOpacity={0.85}
+            >
+              <Animated.View style={[
+                styles.fingerprintBtn,
+                { transform: [{ scale: pulseAnim }] },
+                cargando && styles.fingerprintBtnLoading,
+              ]}>
+                <MaterialCommunityIcons
+                  name="fingerprint"
+                  size={64}
+                  color={cargando ? Theme.colors.textLight : Theme.colors.primary}
+                />
+              </Animated.View>
+            </TouchableOpacity>
+            <Text style={styles.instruction}>Toca para usar biometría</Text>
+            {config.pin && (
+              <TouchableOpacity onPress={() => setShowPin(true)} style={styles.altBtn}>
+                <Text style={styles.altBtnText}>Usar PIN de seguridad</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        ) : (
+          <View style={{ width: '100%', alignItems: 'center' }}>
+            <Text style={styles.instruction}>Ingresa tu PIN de 4 dígitos</Text>
+            <View style={{ height: 20 }} />
+            <PinPad onComplete={onPinComplete} error={pinError} />
+            {biometriaDisponible && biometriaActiva && (
+              <TouchableOpacity onPress={() => setShowPin(false)} style={styles.altBtn}>
+                <Text style={styles.altBtnText}>Regresar a biometría</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
-        {(!biometriaDisponible || !biometriaActiva) && (
-          <TouchableOpacity onPress={handleAuth} style={styles.altBtn}>
-            <Text style={styles.altBtnText}>Ingresar sin biometría</Text>
-          </TouchableOpacity>
+        {(error || pinError) && (
+          <View style={styles.errorWrap}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={16} color={Theme.colors.danger} />
+            <Text style={styles.errorText}>{pinError ? 'PIN incorrecto' : error}</Text>
+          </View>
         )}
       </View>
 
       <View style={styles.footer}>
         <View style={styles.secureRow}>
-          <MaterialCommunityIcons
-            name="shield-check-outline"
-            size={14}
-            color={Theme.colors.secondary}
-          />
-          <Text style={styles.secureText}>Datos guardados solo en tu dispositivo</Text>
+          <MaterialCommunityIcons name="shield-check-outline" size={14} color={Theme.colors.secondary} />
+          <Text style={styles.secureText}>Acceso seguro y privado</Text>
         </View>
       </View>
     </Animated.View>

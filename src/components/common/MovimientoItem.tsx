@@ -34,13 +34,22 @@ const MovimientoItem: React.FC<MovimientoItemProps> = ({
         />
       </View>
       <View style={styles.info}>
-        <Text style={styles.cat} numberOfLines={1}>
-          {iconCfg.label || (movimiento.categoria.charAt(0).toUpperCase() + movimiento.categoria.slice(1))}
-        </Text>
+        <View style={styles.catRow}>
+          <Text style={styles.cat} numberOfLines={1}>
+            {iconCfg.label || (movimiento.categoria.charAt(0).toUpperCase() + movimiento.categoria.slice(1))}
+          </Text>
+          {!isIngreso && movimiento.monto < 10 && (
+            <View style={styles.hormigaTag}>
+              <MaterialCommunityIcons name="bug-outline" size={10} color={Theme.colors.warning} />
+              <Text style={styles.hormigaTagText}>HORMIGA</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.nota} numberOfLines={1}>
           {movimiento.nota || formatDateShort(movimiento.fecha)}
         </Text>
       </View>
+
       
       <View style={styles.rightContent}>
         <View style={styles.amountWrap}>
@@ -89,12 +98,32 @@ const styles = StyleSheet.create({
     marginRight: Theme.spacing.sm,
   },
   info: { flex: 1 },
+  catRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   cat: {
     fontSize: Theme.typography.fontSize.base,
     fontWeight: Theme.typography.fontWeight.semibold,
     color: Theme.colors.text,
   },
+  hormigaTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Theme.colors.warningLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 2,
+  },
+  hormigaTagText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Theme.colors.accent,
+  },
   nota: {
+
     fontSize: Theme.typography.fontSize.xs,
     color: Theme.colors.textLight,
     marginTop: 2,

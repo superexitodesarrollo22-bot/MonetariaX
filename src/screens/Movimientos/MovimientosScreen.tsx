@@ -14,9 +14,13 @@ import Input from '../../components/common/Input';
 import EmptyState from '../../components/common/EmptyState';
 import { Categoria, CategoriaIngreso, TipoMovimiento, Recurrencia } from '../../types';
 
+import ConfirmationModal from '../../components/common/ConfirmationModal';
+
 const MovimientosScreen: React.FC = () => {
   const { movimientos, agregarMovimiento, borrarMovimiento, cargando, resumenMes } = useFinanzasStore();
   const [modalVisible, setModalVisible] = useState(false);
+  const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
+  const [idToDelete, setIdToDelete] = useState<number | null>(null);
   const [tipo, setTipo] = useState<TipoMovimiento>('gasto');
   const [monto, setMonto] = useState('');
   const [categoria, setCategoria] = useState<Categoria | CategoriaIngreso | null>(null);
@@ -75,18 +79,15 @@ const MovimientosScreen: React.FC = () => {
   };
 
   const handleEliminar = (id: number) => {
-    Alert.alert(
-      'Eliminar movimiento',
-      '¿Estás seguro de que quieres eliminar este movimiento?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => borrarMovimiento(id),
-        },
-      ]
-    );
+    setIdToDelete(id);
+    setConfirmDeleteVisible(true);
+  };
+
+  const onConfirmDelete = () => {
+    if (idToDelete !== null) {
+      borrarMovimiento(idToDelete);
+      setIdToDelete(null);
+    }
   };
 
   return (
@@ -130,9 +131,6 @@ const MovimientosScreen: React.FC = () => {
             />
           ))
         )}
-        <Text style={styles.hint}>
-          Mantén presionado un movimiento para eliminarlo
-        </Text>
         <View style={{ height: 20 }} />
       </ScrollView>
 
@@ -144,6 +142,17 @@ const MovimientosScreen: React.FC = () => {
       >
         <MaterialCommunityIcons name="plus" size={28} color="#FFFFFF" />
       </TouchableOpacity>
+
+      <ConfirmationModal
+        visible={confirmDeleteVisible}
+        onClose={() => setConfirmDeleteVisible(false)}
+        onConfirm={onConfirmDelete}
+        title="Eliminar movimiento"
+        message="¿Estás seguro de que quieres eliminar este movimiento? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        isDanger
+      />
+
 
       {/* Bottom Sheet: Nuevo Movimiento */}
       <BottomSheet
@@ -264,7 +273,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Theme.colors.background },
   header: {
     padding: Theme.spacing.md,
-    paddingTop: Platform.OS === 'ios' ? 60 : 45,
+    paddingTop: Platform.OS === 'ios' ? 70 : 55,
   },
   title: {
     fontSize: Theme.typography.fontSize.xl,
@@ -273,8 +282,9 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 100 : 80,
+    bottom: Platform.OS === 'ios' ? 95 : 75,
     right: 24,
+
     width: 58,
     height: 58,
     borderRadius: 29,

@@ -103,40 +103,44 @@ export const eliminarMovimiento = async (id: number): Promise<void> => {
   await db.runAsync(`DELETE FROM movimientos WHERE id = ?`, [id]);
 };
 
-export const obtenerGastosHormiga = async (): Promise<
-  Array<{ categoria: string; totalMesActual: number; totalMesAnterior: number; diferencia: number }>
-> => {
+export const obtenerAnalisisHormiga = async (
+  mes: number,
+  anio: number
+): Promise<{ total: number; cantidad: number }> => {
   const db = await getDatabase();
-  const ahora = new Date();
-  const mesActual = String(ahora.getMonth() + 1).padStart(2, '0');
-  const anioActual = String(ahora.getFullYear());
-  const fechaAnterior = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1);
-  const mesAnterior = String(fechaAnterior.getMonth() + 1).padStart(2, '0');
-  const anioAnterior = String(fechaAnterior.getFullYear());
+  const mesStr = String(mes).padStart(2, '0');
+  const anioStr = String(anio);
 
-  const actual = await db.getAllAsync<{ categoria: string; total: number }>(
-    `SELECT categoria, SUM(monto) as total FROM movimientos
-     WHERE tipo='gasto' AND strftime('%m',fecha)=? AND strftime('%Y',fecha)=?
-     GROUP BY categoria`,
-    [mesActual, anioActual]
+  const mesAnt = mes === 1 ? 12 : mes - 1;
+  const anioAnt = mes === 1 ? anio - 1 : anio;
+  const mesAntStr = String(mesAnt).padStart(2, '0');
+  const anioAntStr = String(anioAnt);
+
+  // 1. Obtener gastos del mes anterior para detectar categorías nuevas
+  const anterior = await db.getAllAsync<{ categoria: string }>(
+    `SELECT DISTINCT categoria FROM movimientos 
+     WHERE tipo = 'gasto' AND strftime('%m', fecha) = ? AND strftime('%Y', fecha) = ?`,
+    [mesAntStr, anioAntStr]
   );
-  const anterior = await db.getAllAsync<{ categoria: string; total: number }>(
-    `SELECT categoria, SUM(monto) as total FROM movimientos
-     WHERE tipo='gasto' AND strftime('%m',fecha)=? AND strftime('%Y',fecha)=?
-     GROUP BY categoria`,
-    [mesAnterior, anioAnterior]
+  const catsPrevias = new Set(anterior.map(r => r.categoria));
+
+  // 2. Obtener todos los gastos del mes actual que sean menores a $10
+  const actual = await db.getAllAsync<Movimiento>(
+    `SELECT * FROM movimientos 
+     WHERE tipo = 'gasto' AND monto < 10 AND strftime('%m', fecha) = ? AND strftime('%Y', fecha) = ?`,
+    [mesStr, anioStr]
   );
 
-  const anteriorMap: Record<string, number> = {};
-  anterior.forEach(r => { anteriorMap[r.categoria] = r.total; });
+  const hormigaCategories = ['comida', 'ocio', 'compras', 'transporte', 'otro'];
 
-  return actual
-    .map(r => ({
-      categoria: r.categoria,
-      totalMesActual: r.total,
-      totalMesAnterior: anteriorMap[r.categoria] || 0,
-      diferencia: r.total - (anteriorMap[r.categoria] || 0),
-    }))
-    .filter(r => r.diferencia > 0)
-    .sort((a, b) => b.diferencia - a.diferencia);
+  // 3. Filtrar los que cumplen con la lógica de gasto hormiga
+  const hormigaMovs = actual.filter(m => {
+    const esCategoriaHormiga = hormigaCategories.includes(m.categoria);
+    const esCategoriaNueva = !catsPrevias.has(m.categoria);
+    return esCategoriaHormiga || esCategoriaNueva;
+  });
+
+  const total = hormigaMovs.reduce((acc, m) => acc + m.monto, 0);
+
+  return { total, cantidad: hormigaMovs.length };
 };

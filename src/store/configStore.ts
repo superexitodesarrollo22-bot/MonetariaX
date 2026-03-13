@@ -8,7 +8,10 @@ interface ConfigState {
   cargarConfig: () => Promise<void>;
   actualizarNombre: (nombre: string) => Promise<void>;
   marcarOnboardingCompletado: () => Promise<void>;
+  actualizarPin: (pin: string) => Promise<void>;
+  actualizarBiometria: (activa: boolean) => Promise<void>;
 }
+
 
 export const useConfigStore = create<ConfigState>((set) => ({
   config: {
@@ -36,4 +39,15 @@ export const useConfigStore = create<ConfigState>((set) => ({
       config: { ...state.config, onboardingCompletado: true },
     }));
   },
+
+  actualizarPin: async (pin: string) => {
+    await actualizarConfig('pin', pin);
+    set(state => ({ config: { ...state.config, pin } }));
+  },
+
+  actualizarBiometria: async (activa: boolean) => {
+    await actualizarConfig('biometriaActiva', activa ? '1' : '0');
+    set(state => ({ config: { ...state.config, biometriaActiva: activa } }));
+  },
 }));
+

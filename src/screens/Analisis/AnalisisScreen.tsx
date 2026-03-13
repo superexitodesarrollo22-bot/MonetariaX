@@ -58,40 +58,36 @@ const AnalisisScreen: React.FC = () => {
     if (resumenMes.balance < 0) {
       arr.push({
         type: 'danger',
-        title: '⚠️ Gastos superan ingresos',
-        message: `Este mes gastaste ${formatMoney(resumenMes.totalGastos - resumenMes.totalIngresos)} más de lo que ganaste. Revisa tus categorías de mayor gasto.`,
+        title: '⚠️ Balance negativo',
+        message: `Gastaste ${formatMoney(resumenMes.totalGastos - resumenMes.totalIngresos)} más de tus ingresos.`,
       });
     } else if (resumenMes.balance > 0) {
       arr.push({
         type: 'success',
-        title: '✅ Buen balance mensual',
-        message: `Tienes ${formatMoney(resumenMes.balance)} de sobrante este mes. Considera ahorrarlo o invertirlo.`,
+        title: '✅ Sobrante',
+        message: `Tienes ${formatMoney(resumenMes.balance)} para ahorrar o invertir.`,
       });
     }
 
-    gastosHormiga.slice(0, 3).forEach(g => {
+    if (gastosHormiga.total > 0) {
       arr.push({
         type: 'warning',
-        title: `🐜 Gasto hormiga: ${g.categoria}`,
-        message: `Gastaste ${formatMoney(g.diferencia)} más en "${g.categoria}" que el mes pasado. En un año eso sería ${formatMoney(g.diferencia * 12)} extra.`,
+        title: '🐜 Gasto Hormiga',
+        message: `Estos pequeños gastos suman ${formatMoney(gastosHormiga.total)} este mes.`,
       });
-    });
+    }
 
     if (gastosPorCategoria.length > 0) {
       const top = gastosPorCategoria[0];
       arr.push({
         type: 'info',
-        title: `📊 Mayor gasto: ${top.categoria}`,
-        message: `En "${top.categoria}" llevas ${formatMoney(top.total)} este mes, que representa el ${Math.round((top.total / resumenMes.totalGastos) * 100)}% de tus gastos totales.`,
+        title: `📊 Top Gasto: ${top.categoria}`,
+        message: `${Math.round((top.total / resumenMes.totalGastos) * 100)}% del total mensual.`,
       });
     }
 
     return arr;
   }, [resumenMes, gastosHormiga, gastosPorCategoria]);
-
-  // Estrategia del día (rotatoria por día del mes)
-  const estrategiaIndex = (new Date().getDate() - 1) % ESTRATEGIAS.length;
-  const estrategiaHoy = ESTRATEGIAS[estrategiaIndex];
 
   // Proyección anual del gasto actual
   const proyeccionAnual = resumenMes.totalGastos * 12;
@@ -106,11 +102,13 @@ const AnalisisScreen: React.FC = () => {
         {alertas.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              <MaterialCommunityIcons name="bell-outline" size={16} /> Alertas
+              <MaterialCommunityIcons name="bell-outline" size={16} /> Alertas resumidas
             </Text>
-            {alertas.map((a, i) => (
-              <AlertCard key={i} type={a.type} title={a.title} message={a.message} />
-            ))}
+            <View style={styles.alertContainer}>
+              {alertas.map((a, i) => (
+                <AlertCard key={i} type={a.type} title={a.title} message={a.message} compact />
+              ))}
+            </View>
           </View>
         )}
 
@@ -141,7 +139,7 @@ const AnalisisScreen: React.FC = () => {
               <View style={styles.proyeccionInfo}>
                 <Text style={styles.proyeccionAmount}>{formatMoney(proyeccionAnual)}</Text>
                 <Text style={styles.proyeccionLabel}>
-                  Así gastarás en 12 meses si mantienes este ritmo
+                  Gasto proyectado a 12 meses
                 </Text>
               </View>
             </View>
@@ -149,50 +147,31 @@ const AnalisisScreen: React.FC = () => {
         )}
 
         {/* Gastos hormiga */}
-        {gastosHormiga.length > 0 && (
+        {gastosHormiga.total > 0 && (
           <Card style={styles.section}>
             <View style={styles.sectionHeader}>
               <MaterialCommunityIcons name="bug-outline" size={20} color={Theme.colors.danger} />
               <Text style={[styles.sectionTitle, { marginLeft: 6, marginBottom: 0 }]}>
-                Gastos hormiga detectados
+                Gastos Hormiga
               </Text>
             </View>
-            <Text style={styles.hormigatip}>
-              Estos gastos subieron respecto al mes anterior. Pequeños, pero se acumulan.
-            </Text>
-            {gastosHormiga.map((g, i) => (
-              <View key={i} style={styles.hormigaRow}>
-                <MaterialCommunityIcons
-                  name={(categoryIconMap[g.categoria as Categoria]?.name || 'dots-horizontal-circle-outline') as any}
-                  size={20}
-                  color={categoryIconMap[g.categoria as Categoria]?.color || Theme.colors.textLight}
-                />
-                <Text style={styles.hormigaCat}>{g.categoria}</Text>
-                <View style={styles.hormigaRight}>
-                  <Text style={styles.hormigaActual}>{formatMoney(g.totalMesActual)}</Text>
-                  <Text style={styles.hormigaDiff}>+{formatMoney(g.diferencia)} vs mes ant.</Text>
-                </View>
-              </View>
-            ))}
+            <View style={styles.hormigaBox}>
+               <Text style={styles.hormigaTotalText}>
+                 🐜 Llevas <Text style={styles.hormigaBigAmount}>{formatMoney(gastosHormiga.total)}</Text> acumulados.
+               </Text>
+               <Text style={styles.hormigaCount}>
+                 Son {gastosHormiga.cantidad} pequeños gastos este mes.
+               </Text>
+            </View>
           </Card>
         )}
-
-        {/* Estrategias de Oro */}
-        <Card style={[styles.section, styles.estrategiaCard]}>
-          <View style={styles.estrategiaHeader}>
-            <MaterialCommunityIcons name="star-outline" size={20} color={Theme.colors.accent} />
-            <Text style={[styles.sectionTitle, styles.estrategiaTitleText]}>
-              Estrategia de Oro del día
-            </Text>
-          </View>
-          <Text style={styles.estrategiaText}>"{estrategiaHoy}"</Text>
-        </Card>
 
         <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>
   );
 };
+
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Theme.colors.background },
@@ -221,6 +200,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Theme.spacing.sm,
   },
+  alertContainer: {
+    marginTop: 4,
+  },
   proyeccionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -240,55 +222,26 @@ const styles = StyleSheet.create({
     color: Theme.colors.textLight,
     marginTop: 2,
   },
-  hormigatip: {
+  hormigaBox: {
+    backgroundColor: Theme.colors.dangerLight,
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(230, 57, 70, 0.1)',
+  },
+  hormigaTotalText: {
+    fontSize: Theme.typography.fontSize.base,
+    color: Theme.colors.text,
+    marginBottom: 4,
+  },
+  hormigaBigAmount: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+    color: Theme.colors.danger,
+  },
+  hormigaCount: {
     fontSize: Theme.typography.fontSize.sm,
     color: Theme.colors.textLight,
-    marginBottom: Theme.spacing.sm,
-  },
-  hormigaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: Theme.colors.border,
-    gap: 10,
-  },
-  hormigaCat: {
-    flex: 1,
-    fontSize: Theme.typography.fontSize.sm,
-    fontWeight: Theme.typography.fontWeight.medium,
-    color: Theme.colors.text,
-    textTransform: 'capitalize',
-    marginLeft: 6,
-  },
-  hormigaRight: { alignItems: 'flex-end' },
-  hormigaActual: {
-    fontSize: Theme.typography.fontSize.sm,
-    fontWeight: Theme.typography.fontWeight.bold,
-    color: Theme.colors.text,
-  },
-  hormigaDiff: {
-    fontSize: 11,
-    color: Theme.colors.danger,
-    marginTop: 2,
-  },
-  estrategiaCard: { backgroundColor: Theme.colors.primary },
-  estrategiaHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: Theme.spacing.sm,
-  },
-  estrategiaTitleText: {
-    color: '#FFFFFF',
-    marginBottom: 0,
-    marginLeft: 6,
-  },
-  estrategiaText: {
-    fontSize: Theme.typography.fontSize.base,
-    color: 'rgba(255,255,255,0.85)',
-    lineHeight: 24,
-    fontStyle: 'italic',
   },
 });
 

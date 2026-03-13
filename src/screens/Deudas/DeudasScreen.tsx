@@ -13,9 +13,14 @@ import Input from '../../components/common/Input';
 import EmptyState from '../../components/common/EmptyState';
 import { formatMoney } from '../../utils/formatters';
 
+import ConfirmationModal from '../../components/common/ConfirmationModal';
+
 const DeudasScreen: React.FC = () => {
   const { deudas, agregarDeuda, pagarCuotaDeuda, borrarDeuda } = useFinanzasStore();
   const [modalVisible, setModalVisible] = useState(false);
+  const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
+  const [confirmPagarVisible, setConfirmPagarVisible] = useState(false);
+  const [selectedDeuda, setSelectedDeuda] = useState<{ id: number; nombre: string } | null>(null);
   const [nombre, setNombre] = useState('');
   const [montoTotal, setMontoTotal] = useState('');
   const [interes, setInteres] = useState('');
@@ -39,6 +44,7 @@ const DeudasScreen: React.FC = () => {
 
   const resetForm = () => {
     setNombre(''); setMontoTotal(''); setInteres(''); setCuota(''); setError('');
+    setCuotaActual(''); setDiaPago('');
   };
 
   const handleGuardar = async () => {
@@ -69,25 +75,27 @@ const DeudasScreen: React.FC = () => {
   };
 
   const handlePagar = (id: number, nombre: string) => {
-    Alert.alert(
-      'Registrar pago',
-      `¿Registrar una cuota pagada para "${nombre}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Sí, pagada', onPress: () => pagarCuotaDeuda(id) },
-      ]
-    );
+    setSelectedDeuda({ id, nombre });
+    setConfirmPagarVisible(true);
+  };
+
+  const onConfirmPagar = () => {
+    if (selectedDeuda) {
+      pagarCuotaDeuda(selectedDeuda.id);
+      setSelectedDeuda(null);
+    }
   };
 
   const handleEliminar = (id: number, nombre: string) => {
-    Alert.alert(
-      'Eliminar deuda',
-      `¿Eliminar la deuda "${nombre}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Eliminar', style: 'destructive', onPress: () => borrarDeuda(id) },
-      ]
-    );
+    setSelectedDeuda({ id, nombre });
+    setConfirmDeleteVisible(true);
+  };
+
+  const onConfirmDelete = () => {
+    if (selectedDeuda) {
+      borrarDeuda(selectedDeuda.id);
+      setSelectedDeuda(null);
+    }
   };
 
   return (
@@ -133,6 +141,25 @@ const DeudasScreen: React.FC = () => {
       >
         <MaterialCommunityIcons name="plus" size={28} color="#FFFFFF" />
       </TouchableOpacity>
+
+      <ConfirmationModal
+        visible={confirmDeleteVisible}
+        onClose={() => setConfirmDeleteVisible(false)}
+        onConfirm={onConfirmDelete}
+        title="Eliminar deuda"
+        message={`¿Estás seguro de que quieres eliminar la deuda "${selectedDeuda?.nombre}"?`}
+        confirmLabel="Eliminar"
+        isDanger
+      />
+
+      <ConfirmationModal
+        visible={confirmPagarVisible}
+        onClose={() => setConfirmPagarVisible(false)}
+        onConfirm={onConfirmPagar}
+        title="Registrar pago"
+        message={`¿Confirmas que haz pagado la cuota de este mes de "${selectedDeuda?.nombre}"?`}
+        confirmLabel="Sí, pagado"
+      />
 
       <BottomSheet
         visible={modalVisible}
@@ -226,7 +253,7 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 100 : 80,
+    bottom: Platform.OS === 'ios' ? 95 : 75,
     right: 24,
     width: 58,
     height: 58,
@@ -272,5 +299,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
 
 export default DeudasScreen;

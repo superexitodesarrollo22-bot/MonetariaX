@@ -15,17 +15,24 @@ interface BiometriaSetupProps {
 
 const BiometriaSetupScreen: React.FC<BiometriaSetupProps> = ({ onFinish }) => {
   const { biometriaDisponible, activarBiometria } = useAuthStore();
-  const { actualizarNombre, config } = useConfigStore();
+  const { actualizarNombre, actualizarPin, config } = useConfigStore();
   const [nombre, setNombre] = React.useState('');
+  const [pin, setPin] = React.useState('');
 
   const handleActivar = async () => {
-    if (nombre.trim()) await actualizarNombre(nombre.trim());
-    if (biometriaDisponible) await activarBiometria();
+    if (!nombre.trim()) { Alert.alert('Error', 'Por favor ingresa tu nombre'); return; }
+    await actualizarNombre(nombre.trim());
+    if (biometriaDisponible) {
+      await activarBiometria();
+    }
     onFinish();
   };
 
-  const handleOmitir = async () => {
-    if (nombre.trim()) await actualizarNombre(nombre.trim());
+  const handleGuardarConPin = async () => {
+    if (!nombre.trim()) { Alert.alert('Error', 'Por favor ingresa tu nombre'); return; }
+    if (pin.length !== 4) { Alert.alert('Error', 'El PIN debe ser de 4 dígitos'); return; }
+    await actualizarNombre(nombre.trim());
+    await actualizarPin(pin);
     onFinish();
   };
 
@@ -33,15 +40,17 @@ const BiometriaSetupScreen: React.FC<BiometriaSetupProps> = ({ onFinish }) => {
     <View style={styles.container}>
       <View style={styles.iconWrap}>
         <MaterialCommunityIcons
-          name="fingerprint"
+          name={biometriaDisponible ? "fingerprint" : "shield-lock-outline"}
           size={80}
           color={Theme.colors.primary}
         />
       </View>
 
-      <Text style={styles.title}>Personaliza tu app</Text>
+      <Text style={styles.title}>
+        {biometriaDisponible ? 'Protege tu cuenta' : 'Configura tu PIN'}
+      </Text>
       <Text style={styles.subtitle}>
-        Antes de empezar, dinos tu nombre y si quieres proteger la app con tu huella dactilar.
+        Para asegurar tus finanzas, necesitamos que configures el acceso a la app.
       </Text>
 
       <View style={styles.form}>
@@ -54,7 +63,19 @@ const BiometriaSetupScreen: React.FC<BiometriaSetupProps> = ({ onFinish }) => {
           autoCapitalize="words"
         />
 
-        {biometriaDisponible && (
+        {!biometriaDisponible || pin.length > 0 ? (
+          <Input
+            label="PIN de seguridad (4 dígitos)"
+            placeholder="0000"
+            value={pin}
+            onChangeText={v => setPin(v.replace(/[^0-9]/g, '').slice(0, 4))}
+            keyboardType="number-pad"
+            secureTextEntry
+            leftIcon="lock-outline"
+          />
+        ) : null}
+
+        {biometriaDisponible && pin.length === 0 && (
           <View style={styles.biometriaInfo}>
             <MaterialCommunityIcons
               name="shield-check-outline"
@@ -62,31 +83,30 @@ const BiometriaSetupScreen: React.FC<BiometriaSetupProps> = ({ onFinish }) => {
               color={Theme.colors.secondary}
             />
             <Text style={styles.biometriaText}>
-              Tu dispositivo tiene huella dactilar disponible.
-              Actívala para proteger tus datos financieros.
+              Puedes entrar usando tu huella dactilar de forma rápida y segura.
             </Text>
           </View>
         )}
       </View>
 
       <View style={styles.actions}>
-        {biometriaDisponible ? (
+        {biometriaDisponible && pin.length === 0 ? (
           <>
             <Button
-              label="Activar huella dactilar"
+              label="Usar huella dactilar"
               onPress={handleActivar}
               variant="primary"
               size="lg"
               fullWidth
             />
-            <TouchableOpacity onPress={handleOmitir} style={styles.skipBtn}>
-              <Text style={styles.skipText}>Continuar sin huella</Text>
+            <TouchableOpacity onPress={() => setPin(' ')} style={styles.skipBtn}>
+              <Text style={styles.skipText}>Prefiero usar un PIN</Text>
             </TouchableOpacity>
           </>
         ) : (
           <Button
             label="¡Comenzar!"
-            onPress={handleOmitir}
+            onPress={handleGuardarConPin}
             variant="primary"
             size="lg"
             fullWidth

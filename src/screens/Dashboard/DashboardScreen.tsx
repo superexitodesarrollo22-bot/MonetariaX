@@ -113,22 +113,6 @@ const DashboardScreen: React.FC = () => {
           ))
         )}
 
-        {/* Estrategia del día */}
-        <Card style={styles.estrategiaCard}>
-          <View style={styles.estrategiaHeader}>
-            <MaterialCommunityIcons
-              name="lightbulb-on-outline"
-              size={22}
-              color={Theme.colors.accent}
-            />
-            <Text style={styles.estrategiaTitle}>Estrategia del día</Text>
-          </View>
-          <Text style={styles.estrategiaText}>
-            💰 Divide tu salario el mismo día que lo recibes: separa comida,
-            transporte, ahorros y emergencias antes de gastar.
-          </Text>
-        </Card>
-
         <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>
@@ -173,27 +157,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Theme.colors.border,
     marginVertical: 4,
-  },
-  estrategiaCard: {
-    backgroundColor: Theme.colors.primary,
-    marginTop: Theme.spacing.sm,
-  },
-  estrategiaHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Theme.spacing.sm,
-    gap: 8,
-  },
-  estrategiaTitle: {
-    fontSize: Theme.typography.fontSize.base,
-    fontWeight: Theme.typography.fontWeight.bold,
-    color: '#FFFFFF',
-    marginLeft: 6,
-  },
-  estrategiaText: {
-    fontSize: Theme.typography.fontSize.sm,
-    color: 'rgba(255,255,255,0.8)',
-    lineHeight: 22,
   },
 });
 

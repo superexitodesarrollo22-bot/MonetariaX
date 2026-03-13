@@ -9,6 +9,7 @@ import DashboardScreen from '../screens/Dashboard/DashboardScreen';
 import MovimientosScreen from '../screens/Movimientos/MovimientosScreen';
 import DeudasScreen from '../screens/Deudas/DeudasScreen';
 import AnalisisScreen from '../screens/Analisis/AnalisisScreen';
+import HistoricoScreen from '../screens/Historico/HistoricoScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -28,6 +29,13 @@ const tabs = [
     label: 'Movimientos',
   },
   {
+    name: 'Historico',
+    component: HistoricoScreen,
+    icon: 'calendar-clock-outline',
+    iconActive: 'calendar-clock',
+    label: 'Histórico',
+  },
+  {
     name: 'Deudas',
     component: DeudasScreen,
     icon: 'credit-card-outline',
@@ -42,6 +50,7 @@ const tabs = [
     label: 'Análisis',
   },
 ];
+
 
 const TabNavigator: React.FC = () => (
   <Tab.Navigator

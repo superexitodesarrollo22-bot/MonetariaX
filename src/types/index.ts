@@ -61,5 +61,7 @@ export interface ConfigUsuario {
   moneda: string;
   onboardingCompletado: boolean;
   biometriaActiva: boolean;
-  notificacionesActivas: boolean; // Nueva
+  notificacionesActivas: boolean;
+  pin?: string; // PIN de 4 dígitos
 }
+

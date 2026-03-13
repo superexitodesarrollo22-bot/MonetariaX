@@ -8,7 +8,7 @@ import {
   obtenerGastosPorCategoria,
   obtenerMovimientosPorMes,
   eliminarMovimiento,
-  obtenerGastosHormiga,
+  obtenerAnalisisHormiga,
 } from '../database/movimientosDB';
 import {
   insertarDeuda,
@@ -29,12 +29,10 @@ interface FinanzasState {
   deudas: Deuda[];
   resumenMes: ResumenMes;
   gastosPorCategoria: Array<{ categoria: string; total: number }>;
-  gastosHormiga: Array<{
-    categoria: string;
-    totalMesActual: number;
-    totalMesAnterior: number;
-    diferencia: number;
-  }>;
+  gastosHormiga: {
+    total: number;
+    cantidad: number;
+  };
   cargando: boolean;
   mesActual: number;
   anioActual: number;
@@ -89,7 +87,7 @@ export const useFinanzasStore = create<FinanzasState>((set, get) => {
     deudas: [],
     resumenMes: { totalIngresos: 0, totalGastos: 0, balance: 0 },
     gastosPorCategoria: [],
-    gastosHormiga: [],
+    gastosHormiga: { total: 0, cantidad: 0 },
     cargando: false,
     mesActual: mes,
     anioActual: anio,
@@ -124,7 +122,8 @@ export const useFinanzasStore = create<FinanzasState>((set, get) => {
     },
 
     cargarGastosHormiga: async () => {
-      const data = await obtenerGastosHormiga();
+      const { mesActual, anioActual } = get();
+      const data = await obtenerAnalisisHormiga(mesActual, anioActual);
       set({ gastosHormiga: data });
     },
 
