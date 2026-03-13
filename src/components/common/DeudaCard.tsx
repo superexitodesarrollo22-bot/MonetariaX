@@ -26,10 +26,15 @@ const DeudaCard: React.FC<DeudaCardProps> = ({ deuda, onPagar, onEliminar }) => 
     deuda.montoTotal, deuda.interesMensual, deuda.cuotaMensual
   );
   const totalAPagar = deuda.montoTotal + totalIntereses;
-  const progreso = totalCuotas > 0 ? deuda.pagosRealizados / totalCuotas : 0;
-  const cuotasRestantes = totalCuotas - deuda.pagosRealizados;
+  
+  // Usar cuotaActual como base si existe, sumando los pagos realizados después de registrarla
+  // O simplemente sumar cuotaActual + pagosRealizados si consideramos que cuotaActual es la inicial.
+  const cuotaEnLaQueVa = (deuda.cuotaActual || 0) + deuda.pagosRealizados;
+  
+  const progreso = totalCuotas > 0 ? cuotaEnLaQueVa / totalCuotas : 0;
+  const cuotasRestantes = Math.max(totalCuotas - cuotaEnLaQueVa, 0);
   const montoRestante = Math.max(deuda.cuotaMensual * cuotasRestantes, 0);
-  const fechaFin = calcularFechaFinalizacion(deuda.fechaInicio, totalCuotas, deuda.pagosRealizados);
+  const fechaFin = calcularFechaFinalizacion(deuda.fechaInicio, totalCuotas, cuotaEnLaQueVa);
 
   return (
     <View style={styles.card}>
@@ -50,9 +55,16 @@ const DeudaCard: React.FC<DeudaCardProps> = ({ deuda, onPagar, onEliminar }) => 
       <View style={styles.progressBg}>
         <View style={[styles.progressFill, { width: `${Math.min(progreso * 100, 100)}%` }]} />
       </View>
-      <Text style={styles.progressText}>
-        {deuda.pagosRealizados} de {totalCuotas} cuotas pagadas ({Math.round(progreso * 100)}%)
-      </Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Theme.spacing.md }}>
+        <Text style={styles.progressText}>
+          {cuotaEnLaQueVa} de {totalCuotas} cuotas ({Math.round(progreso * 100)}%)
+        </Text>
+        {deuda.diaPagoMensual && (
+          <Text style={[styles.progressText, { color: Theme.colors.accent, fontWeight: 'bold' }]}>
+            Día de pago: {deuda.diaPagoMensual}
+          </Text>
+        )}
+      </View>
 
       {/* Detalles */}
       <View style={styles.details}>

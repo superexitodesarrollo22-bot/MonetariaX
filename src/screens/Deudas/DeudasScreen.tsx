@@ -20,6 +20,8 @@ const DeudasScreen: React.FC = () => {
   const [montoTotal, setMontoTotal] = useState('');
   const [interes, setInteres] = useState('');
   const [cuota, setCuota] = useState('');
+  const [cuotaActual, setCuotaActual] = useState('');
+  const [diaPago, setDiaPago] = useState('');
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
 
@@ -57,7 +59,9 @@ const DeudasScreen: React.FC = () => {
       Number(montoTotal),
       Number(interes) || 0,
       Number(cuota),
-      new Date().toISOString().split('T')[0]
+      new Date().toISOString().split('T')[0],
+      Number(cuotaActual) || 0,
+      Number(diaPago) || undefined
     );
     setGuardando(false);
     setModalVisible(false);
@@ -167,6 +171,28 @@ const DeudasScreen: React.FC = () => {
             keyboardType="decimal-pad"
             leftIcon="calendar-month-outline"
           />
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Input
+                label="Cuota actual"
+                placeholder="Ej: 3"
+                value={cuotaActual}
+                onChangeText={setCuotaActual}
+                keyboardType="number-pad"
+                leftIcon="numeric"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Input
+                label="Día de pago"
+                placeholder="1-31"
+                value={diaPago}
+                onChangeText={setDiaPago}
+                keyboardType="number-pad"
+                leftIcon="clock-outline"
+              />
+            </View>
+          </View>
 
           {error ? (
             <Text style={styles.errorText}>{error}</Text>
@@ -191,7 +217,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Theme.colors.background },
   header: {
     padding: Theme.spacing.md,
-    paddingTop: Theme.spacing.lg,
+    paddingTop: Platform.OS === 'ios' ? 60 : 45,
   },
   title: {
     fontSize: Theme.typography.fontSize.xl,

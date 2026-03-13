@@ -6,13 +6,15 @@ export const insertarDeuda = async (
   montoTotal: number,
   interesMensual: number,
   cuotaMensual: number,
-  fechaInicio: string
+  fechaInicio: string,
+  cuotaActual: number = 0,
+  diaPagoMensual?: number
 ): Promise<number> => {
   const db = await getDatabase();
   const result = await db.runAsync(
-    `INSERT INTO deudas (nombre, montoTotal, interesMensual, cuotaMensual, fechaInicio, pagosRealizados, activa, createdAt)
-     VALUES (?, ?, ?, ?, ?, 0, 1, datetime('now'))`,
-    [nombre, montoTotal, interesMensual, cuotaMensual, fechaInicio]
+    `INSERT INTO deudas (nombre, montoTotal, interesMensual, cuotaMensual, fechaInicio, pagosRealizados, cuotaActual, diaPagoMensual, activa, createdAt)
+     VALUES (?, ?, ?, ?, ?, 0, ?, ?, 1, datetime('now'))`,
+    [nombre, montoTotal, interesMensual, cuotaMensual, fechaInicio, cuotaActual, diaPagoMensual || null]
   );
   return result.lastInsertRowId;
 };

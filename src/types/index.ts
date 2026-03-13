@@ -1,5 +1,7 @@
 export type TipoMovimiento = 'ingreso' | 'gasto';
 
+export type Recurrencia = 'ninguna' | 'semanal' | 'quincenal' | 'mensual' | 'anual';
+
 export type CategoriaIngreso =
   | 'sueldo'
   | 'ventas'
@@ -27,6 +29,8 @@ export interface Movimiento {
   categoria: Categoria | CategoriaIngreso | string;
   nota?: string;
   fecha: string; // ISO string
+  recurrencia?: Recurrencia;
+  fechaLimitePago?: string; // Solo para gastos recurrentes
   createdAt: string;
 }
 
@@ -38,6 +42,8 @@ export interface Deuda {
   cuotaMensual: number;
   fechaInicio: string;
   pagosRealizados: number;
+  cuotaActual: number; // Nueva: 3 de 12
+  diaPagoMensual?: number; // Nueva: Día del mes (1-31)
   activa: boolean;
   createdAt: string;
 }
@@ -55,4 +61,5 @@ export interface ConfigUsuario {
   moneda: string;
   onboardingCompletado: boolean;
   biometriaActiva: boolean;
+  notificacionesActivas: boolean; // Nueva
 }

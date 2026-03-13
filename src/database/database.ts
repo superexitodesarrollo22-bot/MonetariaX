@@ -22,6 +22,8 @@ const initDatabase = async (database: SQLite.SQLiteDatabase): Promise<void> => {
       categoria TEXT NOT NULL,
       nota TEXT,
       fecha TEXT NOT NULL,
+      recurrencia TEXT DEFAULT 'ninguna',
+      fechaLimitePago TEXT,
       createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -33,9 +35,24 @@ const initDatabase = async (database: SQLite.SQLiteDatabase): Promise<void> => {
       cuotaMensual REAL NOT NULL,
       fechaInicio TEXT NOT NULL,
       pagosRealizados INTEGER NOT NULL DEFAULT 0,
+      cuotaActual INTEGER NOT NULL DEFAULT 0,
+      diaPagoMensual INTEGER,
       activa INTEGER NOT NULL DEFAULT 1,
       createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- Migraciones manuales para bases existentes
+    -- (Intentamos agregar columnas ignorando errores si ya existen)
+    -- SQLite no permite IF NOT EXISTS en ALTER TABLE directamente en versiones antiguas
+    -- Pero expo-sqlite maneja bien las exec individuales.
+    
+    -- Movimientos
+    ALTER TABLE movimientos ADD COLUMN recurrencia TEXT DEFAULT 'ninguna';
+    ALTER TABLE movimientos ADD COLUMN fechaLimitePago TEXT;
+
+    -- Deudas
+    ALTER TABLE deudas ADD COLUMN cuotaActual INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE deudas ADD COLUMN diaPagoMensual INTEGER;
 
     CREATE TABLE IF NOT EXISTS presupuestos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,6 +72,7 @@ const initDatabase = async (database: SQLite.SQLiteDatabase): Promise<void> => {
       ('nombre', 'Usuario'),
       ('moneda', '$'),
       ('onboardingCompletado', '0'),
-      ('biometriaActiva', '0');
+      ('biometriaActiva', '0'),
+      ('notificacionesActivas', '1');
   `);
 };

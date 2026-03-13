@@ -9,20 +9,21 @@ import { categoryIconMap, tipoIconMap } from '../../utils/categoryIcons';
 interface MovimientoItemProps {
   movimiento: Movimiento;
   onPress?: () => void;
-  onLongPress?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 const MovimientoItem: React.FC<MovimientoItemProps> = ({
-  movimiento, onPress, onLongPress,
+  movimiento, onPress, onEdit, onDelete,
 }) => {
-  const iconCfg = categoryIconMap[movimiento.categoria] || categoryIconMap.otro;
+  const iconKey = movimiento.categoria as keyof typeof categoryIconMap;
+  const iconCfg = categoryIconMap[iconKey] || categoryIconMap.otro;
   const isIngreso = movimiento.tipo === 'ingreso';
 
   return (
     <TouchableOpacity
       style={styles.row}
       onPress={onPress}
-      onLongPress={onLongPress}
       activeOpacity={0.75}
     >
       <View style={[styles.iconWrap, { backgroundColor: iconCfg.bgColor }]}>
@@ -34,20 +35,36 @@ const MovimientoItem: React.FC<MovimientoItemProps> = ({
       </View>
       <View style={styles.info}>
         <Text style={styles.cat} numberOfLines={1}>
-          {movimiento.categoria.charAt(0).toUpperCase() + movimiento.categoria.slice(1)}
+          {iconCfg.label || (movimiento.categoria.charAt(0).toUpperCase() + movimiento.categoria.slice(1))}
         </Text>
         <Text style={styles.nota} numberOfLines={1}>
           {movimiento.nota || formatDateShort(movimiento.fecha)}
         </Text>
       </View>
-      <View style={styles.right}>
-        <Text style={[
-          styles.amount,
-          { color: isIngreso ? Theme.colors.secondary : Theme.colors.danger },
-        ]}>
-          {isIngreso ? '+' : '-'} {formatMoney(movimiento.monto)}
-        </Text>
-        <Text style={styles.date}>{formatDateShort(movimiento.fecha)}</Text>
+      
+      <View style={styles.rightContent}>
+        <View style={styles.amountWrap}>
+          <Text style={[
+            styles.amount,
+            { color: isIngreso ? Theme.colors.secondary : Theme.colors.danger },
+          ]}>
+            {isIngreso ? '+' : '-'} {formatMoney(movimiento.monto)}
+          </Text>
+          <Text style={styles.date}>{formatDateShort(movimiento.fecha)}</Text>
+        </View>
+
+        <View style={styles.actions}>
+          {onEdit && (
+            <TouchableOpacity onPress={onEdit} style={styles.actionBtn}>
+              <MaterialCommunityIcons name="pencil-outline" size={18} color={Theme.colors.textLight} />
+            </TouchableOpacity>
+          )}
+          {onDelete && (
+            <TouchableOpacity onPress={onDelete} style={styles.actionBtn}>
+              <MaterialCommunityIcons name="trash-can-outline" size={18} color={Theme.colors.danger} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -82,7 +99,14 @@ const styles = StyleSheet.create({
     color: Theme.colors.textLight,
     marginTop: 2,
   },
-  right: { alignItems: 'flex-end' },
+  rightContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  amountWrap: {
+    alignItems: 'flex-end',
+    marginRight: 8,
+  },
   amount: {
     fontSize: Theme.typography.fontSize.base,
     fontWeight: Theme.typography.fontWeight.bold,
@@ -91,6 +115,15 @@ const styles = StyleSheet.create({
     fontSize: Theme.typography.fontSize.xs,
     color: Theme.colors.textLight,
     marginTop: 2,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  actionBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#F0F4FF',
   },
 });
 

@@ -12,7 +12,7 @@ import BottomSheet from '../../components/common/BottomSheet';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import EmptyState from '../../components/common/EmptyState';
-import { Categoria, CategoriaIngreso, TipoMovimiento } from '../../types';
+import { Categoria, CategoriaIngreso, TipoMovimiento, Recurrencia } from '../../types';
 
 const MovimientosScreen: React.FC = () => {
   const { movimientos, agregarMovimiento, borrarMovimiento, cargando, resumenMes } = useFinanzasStore();
@@ -21,11 +21,15 @@ const MovimientosScreen: React.FC = () => {
   const [monto, setMonto] = useState('');
   const [categoria, setCategoria] = useState<Categoria | CategoriaIngreso | null>(null);
   const [nota, setNota] = useState('');
+  const [recurrencia, setRecurrencia] = useState<Recurrencia>('ninguna');
+  const [diaLimite, setDiaLimite] = useState('');
+  const [idEdicion, setIdEdicion] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
 
   const resetForm = () => {
     setMonto(''); setCategoria(null); setNota(''); setError('');
+    setRecurrencia('ninguna'); setDiaLimite(''); setIdEdicion(null);
   };
 
   const setTipoYLocal = (t: TipoMovimiento) => {
@@ -43,16 +47,31 @@ const MovimientosScreen: React.FC = () => {
       return;
     }
     setGuardando(true);
-    await agregarMovimiento(
-      tipo,
-      Number(monto),
-      categoria,
-      nota,
-      new Date().toISOString().split('T')[0]
-    );
+    if (idEdicion) {
+      await useFinanzasStore.getState().actualizarMovimiento(
+        idEdicion, tipo, Number(monto), categoria, nota, 
+        new Date().toISOString().split('T')[0], recurrencia, diaLimite
+      );
+    } else {
+      await agregarMovimiento(
+        tipo, Number(monto), categoria, nota, 
+        new Date().toISOString().split('T')[0], recurrencia, diaLimite
+      );
+    }
     setGuardando(false);
     setModalVisible(false);
     resetForm();
+  };
+
+  const handleEditar = (m: any) => {
+    setIdEdicion(m.id);
+    setTipo(m.tipo);
+    setMonto(m.monto.toString());
+    setCategoria(m.categoria);
+    setNota(m.nota || '');
+    setRecurrencia(m.recurrencia || 'ninguna');
+    setDiaLimite(m.fechaLimitePago || '');
+    setModalVisible(true);
   };
 
   const handleEliminar = (id: number) => {
@@ -106,7 +125,8 @@ const MovimientosScreen: React.FC = () => {
             <MovimientoItem
               key={m.id}
               movimiento={m}
-              onLongPress={() => handleEliminar(m.id)}
+              onEdit={() => handleEditar(m)}
+              onDelete={() => handleEliminar(m.id)}
             />
           ))
         )}
@@ -191,6 +211,36 @@ const MovimientosScreen: React.FC = () => {
             leftIcon="pencil-outline"
           />
 
+          {/* Recurrencia */}
+          <Text style={styles.catLabel}>Recurrencia</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 15 }}>
+            {['ninguna', 'semanal', 'quincenal', 'mensual', 'anual'].map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                onPress={() => setRecurrencia(opt as Recurrencia)}
+                style={[
+                  styles.optionBtn,
+                  recurrencia === opt && styles.optionBtnActive
+                ]}
+              >
+                <Text style={[styles.optionText, recurrencia === opt && styles.optionTextActive]}>
+                  {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {recurrencia !== 'ninguna' && (
+            <Input
+              label="Día del mes (Límite de pago)"
+              placeholder="Ej: 15"
+              value={diaLimite}
+              onChangeText={setDiaLimite}
+              keyboardType="number-pad"
+              leftIcon="calendar-clock"
+            />
+          )}
+
           {error ? (
             <Text style={styles.errorText}>{error}</Text>
           ) : null}
@@ -214,7 +264,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Theme.colors.background },
   header: {
     padding: Theme.spacing.md,
-    paddingTop: Theme.spacing.lg,
+    paddingTop: Platform.OS === 'ios' ? 60 : 45,
   },
   title: {
     fontSize: Theme.typography.fontSize.xl,
@@ -309,6 +359,27 @@ const styles = StyleSheet.create({
     color: Theme.colors.danger,
     marginBottom: Theme.spacing.sm,
     textAlign: 'center',
+  },
+  optionBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F0F4FF',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  optionBtnActive: {
+    backgroundColor: Theme.colors.primary,
+    borderColor: Theme.colors.primary,
+  },
+  optionText: {
+    fontSize: Theme.typography.fontSize.sm,
+    color: Theme.colors.textLight,
+  },
+  optionTextActive: {
+    color: '#FFF',
+    fontWeight: 'bold',
   },
 });
 

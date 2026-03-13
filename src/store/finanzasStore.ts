@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { Movimiento, Deuda, Categoria, TipoMovimiento } from '../types';
+import { Movimiento, Deuda, Categoria, TipoMovimiento, CategoriaIngreso, Recurrencia } from '../types';
 import {
   insertarMovimiento,
+  actualizarMovimiento,
   obtenerMovimientos,
   obtenerResumenMes,
   obtenerGastosPorCategoria,
@@ -47,9 +48,22 @@ interface FinanzasState {
   agregarMovimiento: (
     tipo: TipoMovimiento,
     monto: number,
-    categoria: Categoria,
+    categoria: Categoria | CategoriaIngreso,
     nota: string,
-    fecha: string
+    fecha: string,
+    recurrencia?: Recurrencia,
+    fechaLimitePago?: string
+  ) => Promise<void>;
+
+  actualizarMovimiento: (
+    id: number,
+    tipo: TipoMovimiento,
+    monto: number,
+    categoria: Categoria | CategoriaIngreso,
+    nota: string,
+    fecha: string,
+    recurrencia?: Recurrencia,
+    fechaLimitePago?: string
   ) => Promise<void>;
 
   borrarMovimiento: (id: number) => Promise<void>;
@@ -59,7 +73,9 @@ interface FinanzasState {
     montoTotal: number,
     interesMensual: number,
     cuotaMensual: number,
-    fechaInicio: string
+    fechaInicio: string,
+    cuotaActual?: number,
+    diaPagoMensual?: number
   ) => Promise<void>;
 
   pagarCuotaDeuda: (id: number) => Promise<void>;
@@ -112,27 +128,32 @@ export const useFinanzasStore = create<FinanzasState>((set, get) => {
       set({ gastosHormiga: data });
     },
 
-    agregarMovimiento: async (tipo, monto, categoria, nota, fecha) => {
-      await insertarMovimiento(tipo, monto, categoria, nota, fecha);
+    agregarMovimiento: async (tipo: TipoMovimiento, monto: number, categoria: Categoria | CategoriaIngreso, nota: string, fecha: string, recurrencia?: Recurrencia, fechaLimite?: string) => {
+      await insertarMovimiento(tipo, monto, categoria, nota, fecha, recurrencia, fechaLimite);
       await get().cargarTodo();
     },
 
-    borrarMovimiento: async (id) => {
+    actualizarMovimiento: async (id: number, tipo: TipoMovimiento, monto: number, categoria: Categoria | CategoriaIngreso, nota: string, fecha: string, recurrencia?: Recurrencia, fechaLimite?: string) => {
+      await actualizarMovimiento(id, tipo, monto, categoria, nota, fecha, recurrencia, fechaLimite);
+      await get().cargarTodo();
+    },
+
+    borrarMovimiento: async (id: number) => {
       await eliminarMovimiento(id);
       await get().cargarTodo();
     },
 
-    agregarDeuda: async (nombre, montoTotal, interesMensual, cuotaMensual, fechaInicio) => {
-      await insertarDeuda(nombre, montoTotal, interesMensual, cuotaMensual, fechaInicio);
+    agregarDeuda: async (nombre: string, montoTotal: number, interesMensual: number, cuotaMensual: number, fechaInicio: string, cuotaActual?: number, diaPago?: number) => {
+      await insertarDeuda(nombre, montoTotal, interesMensual, cuotaMensual, fechaInicio, cuotaActual, diaPago);
       await get().cargarDeudas();
     },
 
-    pagarCuotaDeuda: async (id) => {
+    pagarCuotaDeuda: async (id: number) => {
       await registrarPagoDeuda(id);
       await get().cargarDeudas();
     },
 
-    borrarDeuda: async (id) => {
+    borrarDeuda: async (id: number) => {
       await eliminarDeuda(id);
       await get().cargarDeudas();
     },

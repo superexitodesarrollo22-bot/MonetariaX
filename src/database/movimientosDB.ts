@@ -1,20 +1,41 @@
 import { getDatabase } from './database';
-import { Movimiento, TipoMovimiento, Categoria, CategoriaIngreso } from '../types';
+import { Movimiento, TipoMovimiento, Categoria, CategoriaIngreso, Recurrencia } from '../types';
 
 export const insertarMovimiento = async (
   tipo: TipoMovimiento,
   monto: number,
   categoria: Categoria | CategoriaIngreso,
   nota: string,
-  fecha: string
+  fecha: string,
+  recurrencia: Recurrencia = 'ninguna',
+  fechaLimitePago?: string
 ): Promise<number> => {
   const db = await getDatabase();
   const result = await db.runAsync(
-    `INSERT INTO movimientos (tipo, monto, categoria, nota, fecha, createdAt)
-     VALUES (?, ?, ?, ?, ?, datetime('now'))`,
-    [tipo, monto, categoria, nota || '', fecha]
+    `INSERT INTO movimientos (tipo, monto, categoria, nota, fecha, recurrencia, fechaLimitePago, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+    [tipo, monto, categoria, nota || '', fecha, recurrencia, fechaLimitePago || null]
   );
   return result.lastInsertRowId;
+};
+
+export const actualizarMovimiento = async (
+  id: number,
+  tipo: TipoMovimiento,
+  monto: number,
+  categoria: Categoria | CategoriaIngreso,
+  nota: string,
+  fecha: string,
+  recurrencia: Recurrencia = 'ninguna',
+  fechaLimitePago?: string
+): Promise<void> => {
+  const db = await getDatabase();
+  await db.runAsync(
+    `UPDATE movimientos 
+     SET tipo = ?, monto = ?, categoria = ?, nota = ?, fecha = ?, recurrencia = ?, fechaLimitePago = ?
+     WHERE id = ?`,
+    [tipo, monto, categoria, nota || '', fecha, recurrencia, fechaLimitePago || null, id]
+  );
 };
 
 export const obtenerMovimientos = async (limite = 50): Promise<Movimiento[]> => {
